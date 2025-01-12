@@ -8,6 +8,8 @@ from groq import Groq
 import os
 import yt_dlp
 import fitz  # PyMuPDF for PDF processing
+from dotenv import load_dotenv
+from youtube_transcript_api import YouTubeTranscriptApi
 
 app = FastAPI()
 
@@ -23,8 +25,11 @@ app.add_middleware(
 # Initialize Redis for session storage
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
+load_dotenv()
 # Initialize Groq client
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+print("")
 
 class ChatMessage(BaseModel):
     session_id: str
@@ -40,6 +45,26 @@ class Resource(BaseModel):
     resource_type: str  # 'pdf' or 'youtube'
     url: str
     content: Optional[str] = None
+
+class TranscriptRequest(BaseModel):
+    video_id: str
+
+# Define a response model
+class TranscriptResponse(BaseModel):
+    transcript: list
+
+@app.post("/fetch-transcript", response_model=TranscriptResponse)
+async def fetch_transcript(request: TranscriptRequest):
+    """
+    Endpoint to fetch the transcript of a YouTube video given its video ID.
+    """
+    try:
+        # Fetch the transcript using YouTubeTranscriptApi
+        transcript = YouTubeTranscriptApi.get_transcript(request.video_id)
+        return {"transcript": transcript,}
+    except Exception as e:
+        # Handle errors and return an appropriate HTTP exception
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/chat")
 async def chat_endpoint(chat_message: ChatMessage):
@@ -92,22 +117,6 @@ async def upload_pdf(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/resource/youtube")
-async def process_youtube(resource: Resource):
-    try:
-        # Extract YouTube transcript
-        ydl_opts = {
-            'writesubtitles': True,
-            'subtitlesformat': 'txt',
-            'skip_download': True,
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(resource.url, download=False)
-            transcript = info.get('subtitles', {}).get('en', '')
-            
-        return {"content": transcript}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/generate-quiz")
 async def generate_quiz(resource: Resource):
