@@ -51,7 +51,7 @@ class TranscriptRequest(BaseModel):
 
 # Define a response model
 class TranscriptResponse(BaseModel):
-    transcript: list
+    transcript: str 
 
 @app.post("/fetch-transcript", response_model=TranscriptResponse)
 async def fetch_transcript(request: TranscriptRequest):
@@ -61,16 +61,19 @@ async def fetch_transcript(request: TranscriptRequest):
     try:
         # Fetch the transcript using YouTubeTranscriptApi
         transcript = YouTubeTranscriptApi.get_transcript(request.video_id)
-        return {"transcript": transcript,}
+        full_text = " ".join([entry['text'] for entry in transcript])
+        return {"transcript": full_text}
     except Exception as e:
         # Handle errors and return an appropriate HTTP exception
         raise HTTPException(status_code=400, detail=str(e))
 
+# In-memory session storage
+session_store = {}
+
 @app.post("/chat")
 async def chat_endpoint(chat_message: ChatMessage):
-    # Get session context from Redis
-    context = redis_client.get(chat_message.session_id)
-    context = json.loads(context) if context else {"history": []}
+    # Get session context from in-memory store
+    context = session_store.get(chat_message.session_id, {"history": []})
     
     # Prepare message for LLM
     messages = [
@@ -90,9 +93,23 @@ async def chat_endpoint(chat_message: ChatMessage):
     
     # Update session history
     context["history"].extend([chat_message.message, response.choices[0].message.content])
-    redis_client.setex(chat_message.session_id, 3600, json.dumps(context))  # 1 hour expiry
+    session_store[chat_message.session_id] = context  # Update in-memory store
+    content = response.choices[0].message.content
+
+    prompt = f"""
+    Generate 5 multiple choice questions based on the following content:
+    {content.response[:2000]}  # Limiting content length
     
-    return {"response": response.choices[0].message.content}
+    Format each question with 4 options and mark the correct answer.
+    """
+    
+    response = groq_client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+    )
+    
+    return {"response": response}
 
 @app.post("/upload/pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -133,7 +150,7 @@ async def generate_quiz(resource: Resource):
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
-    
+    print("RESPONSE",response)
     # Parse and structure the quiz questions
     # (You'd need to implement proper parsing of the LLM response)
     questions = []  # Parse response into QuizQuestion objects
