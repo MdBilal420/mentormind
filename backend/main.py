@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import json
-import redis
 from groq import Groq
 import os
 import yt_dlp
@@ -22,9 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize Redis for session storage
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 load_dotenv()
 # Initialize Groq client
