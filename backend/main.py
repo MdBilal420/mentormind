@@ -40,7 +40,7 @@ class ChatMessage(BaseModel):
 class QuizQuestion(BaseModel):
     question: str
     options: List[str]
-    correct_answer: str
+    correct_answer: str  # This will now hold 'a', 'b', 'c', or 'd'
 
 class Resource(BaseModel):
     resource_type: str  # 'pdf' or 'youtube'
@@ -165,20 +165,29 @@ async def generate_quiz(resource: Resource):
     
     return {"questions": questions}
 
+def find_correct_option(options):
+    return next((option[0] for option in options if "(Correct)" in option[1]), None)
+
 @app.post("/generate_quiz", response_model=GenerateResponse)
 async def generate_content(request: TopicRequest):
 
     # Determine the subject from the provided text
-    subject_prompt = f"Determine the subject of the following text: {request.text}"
+    subject_prompt = f"""
+    Determine the subject of the following text: {request.text}.
+    If the {request.text} is too vague or ambiguous, then return "invalid" as the subject.
+    """
     subject_response = groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[{"role": "user", "content": subject_prompt}],
-        temperature=0.7,
+        temperature=0,
         max_tokens=1000
     )
     subject = subject_response.choices[0].message.content.strip()
+    print("SUBJECT",subject)
 
-
+    # Check if the subject was determined
+    if subject.lower() == "invalid":
+        raise HTTPException(status_code=400, detail="Could not determine the subject from the provided text. Please try again with more specific instructions.")
 
     # Generate explanation about the topic
     explanation_prompt = f"Explain the following topic in detail: {subject}"
