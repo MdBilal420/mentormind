@@ -10,6 +10,7 @@ import yt_dlp
 import fitz  # PyMuPDF for PDF processing
 from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
+import re
 
 app = FastAPI()
 
@@ -52,6 +53,13 @@ class TranscriptRequest(BaseModel):
 # Define a response model
 class TranscriptResponse(BaseModel):
     transcript: str 
+
+class TopicRequest(BaseModel):
+    topic: str
+
+class GenerateResponse(BaseModel):
+    explanation: str
+    questions: List[QuizQuestion]
 
 @app.post("/fetch-transcript", response_model=TranscriptResponse)
 async def fetch_transcript(request: TranscriptRequest):
@@ -145,7 +153,7 @@ async def generate_quiz(resource: Resource):
     Format each question with 4 options and mark the correct answer.
     """
     
-    response = groq_client.chat.completions.create(
+    response   =    groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
@@ -157,6 +165,48 @@ async def generate_quiz(resource: Resource):
     
     return {"questions": questions}
 
+@app.post("/generate_quiz", response_model=GenerateResponse)
+async def generate_content(request: TopicRequest):
+    # Generate explanation about the topic
+    explanation_prompt = f"Explain the following topic in detail: {request.topic}"
+    explanation_response = groq_client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=[{"role": "user", "content": explanation_prompt}],
+        temperature=0.7,
+        max_tokens=1000
+    )
+    explanation = explanation_response.choices[0].message.content
+
+    # Generate quiz questions about the topic
+    quiz_prompt = f"""
+    Generate 5 multiple choice questions based on the following topic:
+    {request.topic}
+    
+    Format each question with 4 options and mark the correct option as (Correct).
+    """
+    quiz_response = groq_client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=[{"role": "user", "content": quiz_prompt}],
+        temperature=0.7,
+        max_tokens=1000
+    )
+    
+    # Parse and structure the quiz questions
+    quiz_content = quiz_response.choices[0].message.content
+    questions = []
+    question_blocks = quiz_content.split("\n\n")
+    for block in question_blocks:
+        question_match = re.match(r"^\d+\.\s(.+?)\n", block)
+        options_match = re.findall(r"([a-d])\)\s(.+)", block)
+        correct_answer_match = next((option[0] for option in options_match if "(Correct)" in option[1]), None)
+        if question_match and options_match and correct_answer_match:
+            question_text = question_match.group(1)
+            options = [option[1].replace(" (Correct)", "") for option in options_match]
+            correct_answer = correct_answer_match
+            questions.append(QuizQuestion(question=question_text, options=options, correct_answer=correct_answer))
+    
+    return {"explanation": explanation, "questions": questions}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
