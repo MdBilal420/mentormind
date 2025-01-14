@@ -6,4 +6,4 @@ python-multipart
 yt-dlp 
 pymupdf
 python-dotenv
-YouTubeTranscriptApi
+youtube_transcript_api
