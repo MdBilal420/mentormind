@@ -186,11 +186,11 @@ async def generate_content(request: TopicRequest):
         raise HTTPException(status_code=400, detail="Could not determine the subject from the provided text. Please try again with more specific instructions.")
 
     # Generate explanation about the topic
-    explanation_prompt = f"Explain the following topic in detail: {subject}"
+    explanation_prompt = f"Explain the following topic in detail: {subject} with markdown formatting."
     explanation_response = groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[{"role": "user", "content": explanation_prompt}],
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=1000
     )
     explanation = explanation_response.choices[0].message.content

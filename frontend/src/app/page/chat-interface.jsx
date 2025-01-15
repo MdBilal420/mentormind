@@ -5,6 +5,7 @@ import { Mic, MicOff, Send, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import Markdown from 'react-markdown'
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -53,21 +54,20 @@ const ChatInterface = () => {
     
     try {
       // Send message to backend
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('http://localhost:8000/generate_quiz', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sessionId,
-          message: input
+          text: input
         }),
       });
       
       const data = await response.json();
-      
+      // console.log("DATA",data.explanation);
       // Add bot response to chat
-      setMessages(prev => [...prev, { type: 'bot', content: data.response }]);
+      setMessages(prev => [...prev, { type: 'bot', content: data.explanation }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, { 
@@ -76,6 +76,7 @@ const ChatInterface = () => {
       }]);
     }
   };
+  
   
   const handleVoiceToggle = () => {
     if (isListening) {
@@ -114,7 +115,8 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto p-4">
+    <div className="flex flex-col mx-auto p-4">
+    <h1 className="text-2xl font-bold flex justify-center">Training Assistant</h1>
       <Card className="flex-grow flex flex-col">
         <CardHeader>
           <CardTitle>Training Assistant</CardTitle>
@@ -122,7 +124,11 @@ const ChatInterface = () => {
         
         <CardContent className="flex-grow flex flex-col">
           {/* Chat messages */}
-          <div className="flex-grow overflow-y-auto mb-4 space-y-4">
+          {messages.length===0 ? <div className="flex-grow overflow-y-auto mb-4 space-y-4 h-[500px] overflowX-scroll">
+            <div className="p-3 rounded-lg bg-gray-100 max-w-[80%] ml-auto">Welcome to the Training Assistant! You can ask questions about the content of a PDF file by uploading it or typing your question.</div>
+          </div>
+          :
+          <div className="flex-grow overflow-y-auto mb-4 space-y-4 h-[500px] overflowX-scroll">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -136,15 +142,15 @@ const ChatInterface = () => {
                   message.type === 'user' ? 'ml-auto' : 'mr-auto'
                 }`}
               >
-                {message.content}
+                {message.type==='user'? message.content: <Markdown>{message.content}</Markdown>}
               </div>
             ))}
             <div ref={messagesEndRef} />
-          </div>
+          </div>}
           
           {/* Input area */}
           <div className="flex gap-2">
-            <Button
+            {/* <Button
               variant="outline"
               size="icon"
               onClick={() => document.getElementById('file-upload').click()}
@@ -157,7 +163,7 @@ const ChatInterface = () => {
               className="hidden"
               onChange={handleFileUpload}
               accept=".pdf"
-            />
+            /> */}
             
             <Button
               variant={isListening ? "destructive" : "outline"}
