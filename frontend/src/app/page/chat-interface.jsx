@@ -116,6 +116,7 @@ const ChatInterface = () => {
 
   return (
     <div className="flex flex-col mx-auto p-4">
+    <h1 className="text-2xl font-bold flex justify-center">Training Assistant</h1>
       <Card className="flex-grow flex flex-col">
         <CardHeader>
           <CardTitle>Training Assistant</CardTitle>
@@ -123,6 +124,10 @@ const ChatInterface = () => {
         
         <CardContent className="flex-grow flex flex-col">
           {/* Chat messages */}
+          {messages.length===0 ? <div className="flex-grow overflow-y-auto mb-4 space-y-4 h-[500px] overflowX-scroll">
+            <div className="p-3 rounded-lg bg-gray-100 max-w-[80%] ml-auto">Welcome to the Training Assistant! You can ask questions about the content of a PDF file by uploading it or typing your question.</div>
+          </div>
+          :
           <div className="flex-grow overflow-y-auto mb-4 space-y-4 h-[500px] overflowX-scroll">
             {messages.map((message, index) => (
               <div
@@ -141,7 +146,7 @@ const ChatInterface = () => {
               </div>
             ))}
             <div ref={messagesEndRef} />
-          </div>
+          </div>}
           
           {/* Input area */}
           <div className="flex gap-2">
