@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const MCQ = ({ question, options, onSubmit }) => {
   const [selectedOption, setSelectedOption] = useState(null);
@@ -16,24 +15,23 @@ const MCQ = ({ question, options, onSubmit }) => {
   };
 
   return (
-    <div className="mb-4">
-      <h3 className="font-bold mb-2">{question}</h3>
+    <div className='mb-4'>
+      <h3 className='font-bold mb-2'>{question}</h3>
       {options.map((option, index) => (
-        <div key={index} className="mb-2">
-          <label className="flex items-center">
+        <div key={index} className='mb-2'>
+          <label className='flex items-center'>
             <input
-              type="radio"
-              name="mcq"
+              type='radio'
+              name='mcq'
               value={option}
               checked={selectedOption === option}
               onChange={handleOptionChange}
-              className="mr-2"
+              className='mr-2'
             />
             {option}
           </label>
         </div>
       ))}
-     
     </div>
   );
 };
