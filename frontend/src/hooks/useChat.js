@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-//const API_URL = 'http://localhost:8000';
-const API_URL = "https://bilal-420-edubot-hf.hf.space";
+const API_URL = "http://localhost:8000";
+//const API_URL = "https://bilal-420-edubot-hf.hf.space";
 
 const useChat = () => {
   const [messages, setMessages] = useState([]);
@@ -17,7 +17,7 @@ const useChat = () => {
     },
     { title: "Blockchain", url: "https://www.youtube.com/watch?v=SSo_EIwHSd4" },
   ]);
-  const [quiz, setQuiz] = useState([]);
+  const [content, setContent] = useState("");
 
   useEffect(() => {
     setSessionId(Math.random().toString(36).substring(7));
@@ -54,7 +54,7 @@ const useChat = () => {
     setInput("");
 
     try {
-      const response = await fetch(`${API_URL}/generate_quiz`, {
+      const response = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,7 +67,7 @@ const useChat = () => {
         ...prev,
         { type: "bot", content: data.explanation },
       ]);
-      setQuiz(data.questions);
+      setContent(data.explanation);
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -77,7 +77,7 @@ const useChat = () => {
           content: "Sorry, there was an error processing your message.",
         },
       ]);
-      setQuiz([]);
+      setContent("");
     }
   };
 
@@ -130,7 +130,7 @@ const useChat = () => {
       videos,
       isListening,
       messagesEndRef,
-      quiz,
+      content,
     },
     {
       setVideos,

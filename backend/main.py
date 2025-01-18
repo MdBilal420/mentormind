@@ -39,9 +39,9 @@ class QuizQuestion(BaseModel):
     correct_answer: str  # This will now hold 'a', 'b', 'c', or 'd'
 
 class Resource(BaseModel):
-    resource_type: str  # 'pdf' or 'youtube'
-    url: str
-    content: Optional[str] = None
+    # resource_type: Optional[str]  # 'pdf' or 'youtube'
+    # url: Optional[str]
+    content: str
 
 class TranscriptRequest(BaseModel):
     video_id: str
@@ -74,7 +74,7 @@ async def fetch_transcript(request: TranscriptRequest):
 # In-memory session storage
 session_store = {}
 
-@app.post("/chat")
+@app.post("/n0-chat")
 async def chat_endpoint(chat_message: ChatMessage):
     # Get session context from in-memory store
     context = session_store.get(chat_message.session_id, {"history": []})
@@ -139,32 +139,44 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/generate-quiz")
+@app.post("/generate_quiz")
 async def generate_quiz(resource: Resource):
     # Use Groq to generate quiz questions based on content
     prompt = f"""
     Generate 5 multiple choice questions based on the following content:
     {resource.content[:2000]}  # Limiting content length
     
-    Format each question with 4 options and mark the correct answer.
+    Format each question with 4 options and mark the correct option as (Correct).
     """
     
-    response   =    groq_client.chat.completions.create(
+    quiz_response = groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
+        temperature=0.7,
+        max_tokens=1000
     )
-    print("RESPONSE",response)
-    # Parse and structure the quiz questions
-    # (You'd need to implement proper parsing of the LLM response)
-    questions = []  # Parse response into QuizQuestion objects
     
+    # Parse and structure the quiz questions
+    quiz_content = quiz_response.choices[0].message.content
+    questions = []
+    question_blocks = quiz_content.split("\n\n")
+    print("Question Blocks",question_blocks)
+    for block in question_blocks:
+        question_match = re.match(r"^\d+\.\s(.+?)\n", block)
+        options_match = re.findall(r"([a-d])\)\s(.+)", block)
+        correct_answer_match = next((option[0] for option in options_match if "(Correct)" in option[1]), None)
+        if question_match and options_match and correct_answer_match:
+            question_text = question_match.group(1)
+            options = [option[1].replace(" (Correct)", "") for option in options_match]
+            correct_answer = correct_answer_match
+            questions.append(QuizQuestion(question=question_text, options=options, correct_answer=correct_answer))
+    print("Questions",questions)    
     return {"questions": questions}
 
 def find_correct_option(options):
     return next((option[0] for option in options if "(Correct)" in option[1]), None)
 
-@app.post("/generate_quiz", response_model=GenerateResponse)
+@app.post("/chat", response_model=GenerateResponse)
 async def generate_content(request: TopicRequest):
 
     # Determine the subject from the provided text
@@ -179,7 +191,6 @@ async def generate_content(request: TopicRequest):
         max_tokens=1000
     )
     subject = subject_response.choices[0].message.content.strip()
-    print("SUBJECT",subject)
 
     # Check if the subject was determined
     if subject.lower() == "invalid":

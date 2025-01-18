@@ -11,7 +11,7 @@ import Quiz from "@/components/quiz/Quiz";
 
 const ChatInterface = () => {
   const [
-    { messages, input, videos, isListening, messagesEndRef, quiz },
+    { messages, input, videos, isListening, messagesEndRef, content },
     {
       setResourceType,
       handleSend,
@@ -22,15 +22,16 @@ const ChatInterface = () => {
   ] = useChat();
 
   return (
-    <div className='flex flex-col w-mx mx-auto p-4 h-mx-[500px]'>
+    <div className='flex flex-col w-full mx-auto p-4 h-full max-h-[500px]'>
       <ChatHeader />
-      <div className='flex flex-row w-mx mx-auto p-4 h-full'>
+      <div className='flex flex-col lg:flex-row w-full mx-auto p-4 h-full'>
         <Resource
           setInput={setInput}
           setResourceType={setResourceType}
           videos={videos}
+          className='w-full lg:w-1/4 mb-4 lg:mb-0'
         />
-        <Card className='flex-grow flex flex-col w-[800px] h-full mr-4 ml-4'>
+        <Card className='flex-grow flex flex-col w-full lg:w-2/4 h-full mb-4 lg:mb-0 lg:mx-4'>
           <CardHeader>
             <CardTitle>Edubot</CardTitle>
           </CardHeader>
@@ -45,7 +46,7 @@ const ChatInterface = () => {
             />
           </CardContent>
         </Card>
-        <Quiz quiz={quiz} />
+        <Quiz content={content} className='w-full lg:w-1/4' />
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import YoutubeSearch from "./search/youtube-search";
 
 const Resource = ({ setInput, setResourceType, videos }) => {
   const handleIput = (value, type) => {
@@ -17,11 +18,12 @@ const Resource = ({ setInput, setResourceType, videos }) => {
   };
 
   return (
-    <Card className='flex-grow flex flex-col w-[300px] h-[540] mr-4'>
+    <Card className='flex-grow flex flex-col w-full sm:w-[240px] h-[540px] sm:h-[540px] mr-4'>
       <CardHeader>
         <CardTitle>Sources</CardTitle>
       </CardHeader>
       <CardContent className='flex-grow flex flex-col overflow-y-auto'>
+        <YoutubeSearch />
         <div className='h-[200px]'>
           <Accordion
             type='multiple'
