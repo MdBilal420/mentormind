@@ -27,7 +27,7 @@ const ChatInput = ({
       value={input}
       onChange={(e) => setInput(e.target.value)}
       onKeyPress={(e) => e.key === "Enter" && handleSend()}
-      placeholder='Type your message...'
+      placeholder='What do you want to know?'
       className='flex-grow'
     />
 

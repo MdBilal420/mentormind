@@ -57,18 +57,22 @@ class GenerateResponse(BaseModel):
     explanation: str
     questions: List[QuizQuestion]
 
-@app.post("/fetch-transcript", response_model=TranscriptResponse)
-async def fetch_transcript(request: TranscriptRequest):
-    """
-    Endpoint to fetch the transcript of a YouTube video given its video ID.
-    """
-    try:
-        # Fetch the transcript using YouTubeTranscriptApi
-        transcript = YouTubeTranscriptApi.get_transcript(request.video_id)
+@app.get("/fetch-transcript-video/{video_id}", response_model=TranscriptResponse)
+async def fetch_transcript(video_id: str):
+    try:       
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
         full_text = " ".join([entry['text'] for entry in transcript])
-        return {"transcript": full_text}
+        # modify full_text to a markdown format using groq  
+        prompt = f"Modify the following text to a markdown format: {full_text}"
+        response = groq_client.chat.completions.create(
+            model="mixtral-8x7b-32768",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=1000
+        )
+        return TranscriptResponse(transcript=response.choices[0].message.content)
     except Exception as e:
-        # Handle errors and return an appropriate HTTP exception
+        print(f"Error: {str(e)}")  # Debug print
         raise HTTPException(status_code=400, detail=str(e))
 
 # In-memory session storage
@@ -144,34 +148,51 @@ async def generate_quiz(resource: Resource):
     # Use Groq to generate quiz questions based on content
     prompt = f"""
     Generate 5 multiple choice questions based on the following content:
-    {resource.content[:2000]}  # Limiting content length
+    {resource.content}
     
-    Format each question with 4 options and mark the correct option as (Correct).
+    Format your response as a JSON object with this exact structure:
+    {{
+        "questions": [
+            {{
+                "question": "Question text here",
+                "options": ["(Correct) Option A", "Option B", "Option C", "Option D"]
+            }}
+        ]
+    }}
     """
     
     quiz_response = groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=1000
     )
     
     # Parse and structure the quiz questions
-    quiz_content = quiz_response.choices[0].message.content
-    questions = []
-    question_blocks = quiz_content.split("\n\n")
-    print("Question Blocks",question_blocks)
-    for block in question_blocks:
-        question_match = re.match(r"^\d+\.\s(.+?)\n", block)
-        options_match = re.findall(r"([a-d])\)\s(.+)", block)
-        correct_answer_match = next((option[0] for option in options_match if "(Correct)" in option[1]), None)
-        if question_match and options_match and correct_answer_match:
-            question_text = question_match.group(1)
-            options = [option[1].replace(" (Correct)", "") for option in options_match]
-            correct_answer = correct_answer_match
-            questions.append(QuizQuestion(question=question_text, options=options, correct_answer=correct_answer))
-    print("Questions",questions)    
-    return {"questions": questions}
+    try:
+        # First, get the response content and parse it as JSON
+        quiz_content = json.loads(quiz_response.choices[0].message.content)
+        questions = []
+        
+        for q in quiz_content["questions"]:
+            # Find the correct answer by looking for "(Correct)" marker
+            options = [opt.replace("(Correct) ", "").replace("(Incorrect) ", "") for opt in q["options"]]
+            correct_index = next(i for i, opt in enumerate(q["options"]) if "(Correct)" in opt)
+            correct_answer = chr(97 + correct_index)  # Convert index to 'a', 'b', 'c', or 'd'
+            
+            questions.append(QuizQuestion(
+                question=q["question"],
+                options=options,
+                correct_answer=correct_answer
+            ))
+        
+        return {"questions": questions}
+    except json.JSONDecodeError as e:
+        print("Failed to parse JSON:", quiz_response.choices[0].message.content)
+        raise HTTPException(status_code=500, detail="Failed to generate valid quiz questions")
+    except Exception as e:
+        print("Error processing quiz:", str(e))
+        raise HTTPException(status_code=500, detail="Error processing quiz questions")
 
 def find_correct_option(options):
     return next((option[0] for option in options if "(Correct)" in option[1]), None)
