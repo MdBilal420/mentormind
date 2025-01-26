@@ -22,10 +22,15 @@ const Resource = ({
 		setInput(value);
 	};
 
+	const handleVideoClick = (video) => {
+		handleIput(video.title, "video");
+		setSelectedResource(video.url);
+	};
+
 	return (
 		<Tabs
 			defaultValue='sources'
-			className='flex-grow flex flex-col w-full sm:w-[240px] h-[540px] sm:h-[540px]'
+			className='flex-grow flex flex-col w-full sm:w-[160px] h-[540px] sm:h-[540px]'
 		>
 			<TabsList>
 				<TabsTrigger value='search'>Search</TabsTrigger>
@@ -33,7 +38,7 @@ const Resource = ({
 			</TabsList>
 			<TabsContent value='search'>
 				<Card className='flex-grow flex flex-col w-full sm:w-[240px] h-[500px] sm:h-[500px] mr-2 p-4'>
-					<YoutubeSearch />
+					<YoutubeSearch handleVideoClick={handleVideoClick} />
 				</Card>
 			</TabsContent>
 			<TabsContent value='sources'>
@@ -55,8 +60,7 @@ const Resource = ({
 											<Button
 												variant='ghost'
 												onClick={() => {
-													handleIput(video.title, "video");
-													setSelectedResource(video.url);
+													handleVideoClick(video);
 												}}
 											>
 												<Youtube />

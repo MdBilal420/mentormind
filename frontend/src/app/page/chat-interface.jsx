@@ -10,7 +10,15 @@ import useChat from "@/hooks/useChat";
 
 const ChatInterface = () => {
 	const [
-		{ messages, input, videos, isListening, messagesEndRef, content },
+		{
+			messages,
+			input,
+			videos,
+			isListening,
+			messagesEndRef,
+			content,
+			resourceType,
+		},
 		{
 			setResourceType,
 			handleSend,
@@ -44,6 +52,7 @@ const ChatInterface = () => {
 							isListening={isListening}
 							handleSend={handleSend}
 							handleVoiceToggle={handleVoiceToggle}
+							resourceType={resourceType}
 						/>
 					</CardContent>
 				</Card>

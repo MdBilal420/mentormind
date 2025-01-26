@@ -52,15 +52,16 @@ const Quiz = ({ content }) => {
 							{quiz[currentQuestionIndex].question}
 						</h3>
 						{quiz[currentQuestionIndex].options.map((option, index) => (
-							<div key={index} className='mb-2'>
+							<div key={index} className='mb-2 flex items-center align-middle'>
 								<input
 									type='radio'
 									name='answer'
 									value={option}
 									checked={userAnswer === option}
 									onChange={(e) => setUserAnswer(e.target.value)}
+									className='mr-2'
 								/>
-								{option}
+								<p className='text-sm'>{option}</p>
 							</div>
 						))}
 						<Button

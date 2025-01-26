@@ -64,7 +64,10 @@ const useQuiz = (content) => {
 			setUserAnswer(null);
 		} else {
 			setIsCompleted(true);
-			alert(`Quiz finished! Your score: ${score + 1}/${quiz.length}`);
+			const percentage = Math.round(((score + 1) / quiz.length) * 100);
+			alert(`Quiz finished! Your score: ${percentage}%`);
+			resetQuiz();
+			setQuiz([]);
 		}
 	};
 

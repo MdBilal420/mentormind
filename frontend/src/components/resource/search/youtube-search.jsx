@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 
 const apiKey = process.env.GOOGLE_YOUTUBE_API_KEY;
-const YoutubeSearch = () => {
+const YoutubeSearch = ({ handleVideoClick }) => {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState([]);
 
@@ -58,6 +58,12 @@ const YoutubeSearch = () => {
 					<div
 						key={result.id.videoId}
 						className='flex flex-row items-center justify-center border border-gray-200 rounded-md p-2 mb-1 cursor-pointer hover:bg-gray-100'
+						onClick={() =>
+							handleVideoClick({
+								url: `https://www.youtube.com/watch?v=${result.id.videoId}`,
+								title: result.snippet.title,
+							})
+						}
 					>
 						<img
 							src={result.snippet.thumbnails.default.url}

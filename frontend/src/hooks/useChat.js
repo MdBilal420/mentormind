@@ -90,9 +90,8 @@ const useChat = () => {
 		} else if (resourceType === "video") {
 			try {
 				const videoId = extractVideoId(selectedResource);
-				console.log("videoId", videoId);
 				const response = await fetch(
-					`${API_URL}/fetch-transcript-video/${videoId}`
+					`${API_URL}/fetch-transcript-video/${videoId}/${input}`
 				);
 
 				const data = await response.json();
@@ -168,6 +167,7 @@ const useChat = () => {
 			isListening,
 			messagesEndRef,
 			content,
+			resourceType,
 		},
 		{
 			setVideos,

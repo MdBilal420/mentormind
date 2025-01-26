@@ -57,20 +57,25 @@ class GenerateResponse(BaseModel):
     explanation: str
     questions: List[QuizQuestion]
 
-@app.get("/fetch-transcript-video/{video_id}", response_model=TranscriptResponse)
-async def fetch_transcript(video_id: str):
+@app.get("/fetch-transcript-video/{video_id}/{input}", response_model=TranscriptResponse)
+async def fetch_transcript(video_id: str, input: str):
     try:       
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         full_text = " ".join([entry['text'] for entry in transcript])
-        # modify full_text to a markdown format using groq  
-        prompt = f"Modify the following text to a markdown format: {full_text}"
+
+        if input == "":       
+            # modify full_text to a markdown format using groq  
+            prompt = f"Modify the following text to a markdown format: {full_text}"
+        else:
+            prompt = f"Generate insights from the following content: {full_text} and focus on the following topic: {input} and return the content in markdown format"
         response = groq_client.chat.completions.create(
             model="mixtral-8x7b-32768",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": prompt}], 
             temperature=0.7,
             max_tokens=1000
         )
-        return TranscriptResponse(transcript=response.choices[0].message.content)
+        content = response.choices[0].message.content
+        return TranscriptResponse(transcript=content)
     except Exception as e:
         print(f"Error: {str(e)}")  # Debug print
         raise HTTPException(status_code=400, detail=str(e))
