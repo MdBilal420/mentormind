@@ -23,8 +23,11 @@ const useChat = () => {
 		},
 		{ title: "Blockchain", url: "https://www.youtube.com/watch?v=SSo_EIwHSd4" },
 	]);
+	const [pdfs, setPdfs] = useState([]);
 	const [selectedResource, setSelectedResource] = useState(null);
 	const [content, setContent] = useState("");
+
+	console.log("content", messages);
 
 	useEffect(() => {
 		setSessionId(Math.random().toString(36).substring(7));
@@ -60,61 +63,60 @@ const useChat = () => {
 		setMessages((prev) => [...prev, userMessage]);
 		setInput("");
 
-		if (resourceType === "text") {
-			try {
-				const response = await fetch(`${API_URL}/chat`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ text: input }),
-				});
+		try {
+			const response = await fetch(`${API_URL}/chat`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ text: input, session_id: sessionId }),
+			});
 
-				const data = await response.json();
-				setMessages((prev) => [
-					...prev,
-					{ type: "bot", content: data.explanation },
-				]);
-				setContent(data.explanation);
-			} catch (error) {
-				console.error("Error sending message:", error);
-				setMessages((prev) => [
-					...prev,
-					{
-						type: "error",
-						content: "Sorry, there was an error processing your message.",
-					},
-				]);
-				setContent("");
-			}
-		} else if (resourceType === "video") {
-			try {
-				const videoId = extractVideoId(selectedResource);
-				const response = await fetch(
-					`${API_URL}/fetch-transcript-video/${videoId}/${input}`
-				);
-
-				const data = await response.json();
-				console.log("data", data);
-				setMessages((prev) => [
-					...prev,
-					{ type: "bot", content: data.transcript },
-				]);
-				setContent(data.transcript);
-				setResourceType("text");
-				setSelectedResource(null);
-			} catch (error) {
-				console.error("Error fetching transcript:", error);
-				setMessages((prev) => [
-					...prev,
-					{
-						type: "error",
-						content: "Sorry, there was an error fetching the transcript.",
-					},
-				]);
-				setContent("");
-			}
+			const data = await response.json();
+			setMessages((prev) => [
+				...prev,
+				{ type: "bot", content: data.explanation },
+			]);
+			setContent(data.explanation);
+		} catch (error) {
+			console.error("Error sending message:", error);
+			setMessages((prev) => [
+				...prev,
+				{
+					type: "error",
+					content: "Sorry, there was an error processing your message.",
+				},
+			]);
+			setContent("");
 		}
+		// else if (resourceType === "video") {
+		// 	try {
+		// 		const videoId = extractVideoId(selectedResource);
+		// 		const response = await fetch(
+		// 			`${API_URL}/fetch-transcript-video/${videoId}/${input}`
+		// 		);
+
+		// 		const data = await response.json();
+		// 		console.log("data", data);
+		// 		setMessages((prev) => [
+		// 			...prev,
+		// 			{ type: "bot", content: data.transcript },
+		// 		]);
+		// 		setContent(data.transcript);
+		// 		setResourceType("text");
+		// 		setSelectedResource(null);
+		// 	} catch (error) {
+		// 		console.error("Error fetching transcript:", error);
+		// 		setMessages((prev) => [
+		// 			...prev,
+		// 			{
+		// 				type: "error",
+		// 				content: "Sorry, there was an error fetching the transcript.",
+		// 			},
+		// 		]);
+		// 		setContent("");
+		// 	}
+		// }
 	};
 
 	const handleVoiceToggle = () => {
@@ -143,10 +145,16 @@ const useChat = () => {
 			setMessages((prev) => [
 				...prev,
 				{
+					type: "bot",
+					content: data.content,
+				},
+				{
 					type: "system",
 					content: `Successfully uploaded ${file.name}. You can now ask questions about its content.`,
 				},
 			]);
+			setPdfs((prev) => [...prev, { name: file.name }]);
+			setContent(data.content);
 		} catch (error) {
 			console.error("Error uploading file:", error);
 			setMessages((prev) => [
@@ -168,6 +176,7 @@ const useChat = () => {
 			messagesEndRef,
 			content,
 			resourceType,
+			pdfs,
 		},
 		{
 			setVideos,

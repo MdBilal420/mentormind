@@ -18,6 +18,7 @@ const ChatInterface = () => {
 			messagesEndRef,
 			content,
 			resourceType,
+			pdfs,
 		},
 		{
 			setResourceType,
@@ -38,6 +39,7 @@ const ChatInterface = () => {
 					setResourceType={setResourceType}
 					setSelectedResource={setSelectedResource}
 					videos={videos}
+					pdfs={pdfs}
 					className='w-full lg:w-1/4'
 				/>
 				<Card className='flex-grow flex flex-col w-full lg:w-2/4 h-full mb-4 lg:mb-0 lg:mx-4'>
@@ -53,6 +55,7 @@ const ChatInterface = () => {
 							handleSend={handleSend}
 							handleVoiceToggle={handleVoiceToggle}
 							resourceType={resourceType}
+							handleFileUpload={handleFileUpload}
 						/>
 					</CardContent>
 				</Card>

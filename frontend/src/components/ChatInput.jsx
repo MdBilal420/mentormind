@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, MicOff, Send } from "lucide-react";
+import { Mic, MicOff, Send, Upload } from "lucide-react";
 
 const ChatInput = ({
 	input,
@@ -8,8 +8,23 @@ const ChatInput = ({
 	isListening,
 	handleSend,
 	handleVoiceToggle,
+	handleFileUpload,
 }) => (
 	<div className='flex gap-2'>
+		<Button
+			variant='outline'
+			size='icon'
+			onClick={() => document.getElementById("file-upload").click()}
+		>
+			<Upload className='h-4 w-4' />
+		</Button>
+		<Input
+			type='file'
+			id='file-upload'
+			className='hidden'
+			onChange={handleFileUpload}
+			accept='.pdf'
+		/>
 		<Button
 			variant={isListening ? "destructive" : "outline"}
 			size='icon'

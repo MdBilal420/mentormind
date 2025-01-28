@@ -10,6 +10,8 @@ import fitz  # PyMuPDF for PDF processing
 from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 app = FastAPI()
 
@@ -26,6 +28,9 @@ load_dotenv()
 # Initialize Groq client
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+# Add this with your other environment variables
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
 print("")
 
 class ChatMessage(BaseModel):
@@ -39,8 +44,6 @@ class QuizQuestion(BaseModel):
     correct_answer: str  # This will now hold 'a', 'b', 'c', or 'd'
 
 class Resource(BaseModel):
-    # resource_type: Optional[str]  # 'pdf' or 'youtube'
-    # url: Optional[str]
     content: str
 
 class TranscriptRequest(BaseModel):
@@ -51,23 +54,70 @@ class TranscriptResponse(BaseModel):
     transcript: str 
 
 class TopicRequest(BaseModel):
+    session_id: str
     text: str
 
 class GenerateResponse(BaseModel):
     explanation: str
-    questions: List[QuizQuestion]
 
 @app.get("/fetch-transcript-video/{video_id}/{input}", response_model=TranscriptResponse)
 async def fetch_transcript(video_id: str, input: str):
-    try:       
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        full_text = " ".join([entry['text'] for entry in transcript])
+    try:
+        # First try YouTubeTranscriptApi
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            full_text = " ".join([entry['text'] for entry in transcript])
+        except Exception as transcript_error:
+            # Fallback to YouTube Data API
+            try:
+                youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+                
+                # Get captions track
+                captions_response = youtube.captions().list(
+                    part='snippet',
+                    videoId=video_id
+                ).execute()
+                
+                if not captions_response.get('items'):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No captions available for this video"
+                    )
+                
+                # Get the first English caption track or default to the first available
+                caption_id = None
+                for item in captions_response['items']:
+                    if item['snippet']['language'] == 'en':
+                        caption_id = item['id']
+                        break
+                if not caption_id:
+                    caption_id = captions_response['items'][0]['id']
+                
+                # Download the caption track
+                caption = youtube.captions().download(
+                    id=caption_id,
+                    tfmt='srt'
+                ).execute()
+                
+                # Convert caption to text (remove timecodes and formatting)
+                full_text = ' '.join(
+                    line for line in caption.decode('utf-8').split('\n')
+                    if not line.strip().isdigit() and 
+                    not '-->' in line and 
+                    line.strip()
+                )
+                
+            except HttpError as api_error:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"YouTube API error: {str(api_error)}"
+                )
 
         if input == "":       
-            # modify full_text to a markdown format using groq  
             prompt = f"Modify the following text to a markdown format: {full_text}"
         else:
             prompt = f"Generate insights from the following content: {full_text} and focus on the following topic: {input} and return the content in markdown format"
+            
         response = groq_client.chat.completions.create(
             model="mixtral-8x7b-32768",
             messages=[{"role": "user", "content": prompt}], 
@@ -76,6 +126,7 @@ async def fetch_transcript(video_id: str, input: str):
         )
         content = response.choices[0].message.content
         return TranscriptResponse(transcript=content)
+        
     except Exception as e:
         print(f"Error: {str(e)}")  # Debug print
         raise HTTPException(status_code=400, detail=str(e))
@@ -150,6 +201,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 @app.post("/generate_quiz")
 async def generate_quiz(resource: Resource):
+
     # Use Groq to generate quiz questions based on content
     prompt = f"""
     Generate 5 multiple choice questions based on the following content:
@@ -202,65 +254,43 @@ async def generate_quiz(resource: Resource):
 def find_correct_option(options):
     return next((option[0] for option in options if "(Correct)" in option[1]), None)
 
-@app.post("/chat", response_model=GenerateResponse)
+@app.post("/chat")
 async def generate_content(request: TopicRequest):
 
-    # Determine the subject from the provided text
-    subject_prompt = f"""
-    Determine the subject of the following text: {request.text}.
-    If the {request.text} is too vague or ambiguous, then return "invalid" as the subject.
-    """
-    subject_response = groq_client.chat.completions.create(
-        model="mixtral-8x7b-32768",
-        messages=[{"role": "user", "content": subject_prompt}],
-        temperature=0,
-        max_tokens=1000
-    )
-    subject = subject_response.choices[0].message.content.strip()
+    # Get session context from in-memory store
+    context = session_store.get(request.session_id, {"history": []})
 
-    # Check if the subject was determined
-    if subject.lower() == "invalid":
-        raise HTTPException(status_code=400, detail="Could not determine the subject from the provided text. Please try again with more specific instructions.")
-
-    # Generate explanation about the topic
-    explanation_prompt = f"Explain the following topic in detail: {subject} with markdown formatting."
-    explanation_response = groq_client.chat.completions.create(
-        model="mixtral-8x7b-32768",
-        messages=[{"role": "user", "content": explanation_prompt}],
-        temperature=0.1,
-        max_tokens=1000
-    )
-    explanation = explanation_response.choices[0].message.content
-
-    # Generate quiz questions about the topic
-    quiz_prompt = f"""
-    Generate 5 multiple choice questions based on the following topic:
-    {subject}
+    # Prepare message for LLM
+    messages = [
+        {"role": "system", "content": "You are a helpful training assistant. Guide the user through their learning material and help them understand the content."},
+        *[{"role": "user" if i % 2 == 0 else "assistant", "content": msg} 
+          for i, msg in enumerate(context["history"])],
+        {"role": "user", "content": request.text}
+    ]
     
-    Format each question with 4 options and mark the correct option as (Correct).
-    """
-    quiz_response = groq_client.chat.completions.create(
+    # Get response from Groq
+    response = groq_client.chat.completions.create(
         model="mixtral-8x7b-32768",
-        messages=[{"role": "user", "content": quiz_prompt}],
+        messages=messages,
         temperature=0.7,
         max_tokens=1000
     )
     
-    # Parse and structure the quiz questions
-    quiz_content = quiz_response.choices[0].message.content
-    questions = []
-    question_blocks = quiz_content.split("\n\n")
-    for block in question_blocks:
-        question_match = re.match(r"^\d+\.\s(.+?)\n", block)
-        options_match = re.findall(r"([a-d])\)\s(.+)", block)
-        correct_answer_match = next((option[0] for option in options_match if "(Correct)" in option[1]), None)
-        if question_match and options_match and correct_answer_match:
-            question_text = question_match.group(1)
-            options = [option[1].replace(" (Correct)", "") for option in options_match]
-            correct_answer = correct_answer_match
-            questions.append(QuizQuestion(question=question_text, options=options, correct_answer=correct_answer))
-    
-    return {"explanation": explanation, "questions": questions}
+    # Update session history
+    context["history"].extend([request.text, response.choices[0].message.content])
+    session_store[request.session_id] = context  # Update in-memory store
+    content = response.choices[0].message.content
+
+    # Generate explanation about the topic
+    explanation_prompt = f"Explain the following topic in detail: {content[:2000]} with markdown formatting."
+    explanation_response = groq_client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=[{"role": "user", "content": explanation_prompt}],
+        temperature=0.7,
+        max_tokens=1000
+    )
+    explanation = explanation_response.choices[0].message.content
+    return {"explanation": explanation}
 
 if __name__ == "__main__":
     import uvicorn

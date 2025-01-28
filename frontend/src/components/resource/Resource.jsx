@@ -9,13 +9,13 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import YoutubeSearch from "./search/youtube-search";
 
 const Resource = ({
 	setInput,
 	setResourceType,
 	videos,
 	setSelectedResource,
+	pdfs,
 }) => {
 	const handleIput = (value, type) => {
 		setResourceType(type);
@@ -33,14 +33,16 @@ const Resource = ({
 			className='flex-grow flex flex-col w-full sm:w-[160px] h-[540px] sm:h-[540px]'
 		>
 			<TabsList>
-				<TabsTrigger value='search'>Search</TabsTrigger>
+				{/* <TabsTrigger value='search' disabled={true}>
+					Search
+				</TabsTrigger> */}
 				<TabsTrigger value='sources'>Sources</TabsTrigger>
 			</TabsList>
-			<TabsContent value='search'>
+			{/* <TabsContent value='search'>
 				<Card className='flex-grow flex flex-col w-full sm:w-[240px] h-[500px] sm:h-[500px] mr-2 p-4'>
 					<YoutubeSearch handleVideoClick={handleVideoClick} />
 				</Card>
-			</TabsContent>
+			</TabsContent> */}
 			<TabsContent value='sources'>
 				<Card className='flex-grow flex flex-col w-full sm:w-[240px] h-[540px] sm:h-[540px] mr-2'>
 					<CardHeader>
@@ -48,13 +50,15 @@ const Resource = ({
 					</CardHeader>
 					<CardContent className='flex-grow flex flex-col overflow-y-auto'>
 						<div className='h-[200px]'>
-							<Accordion
-								type='multiple'
-								collapsible='true'
-								defaultValue={videos[0].title}
-							>
-								<AccordionItem value={videos[0].title}>
-									<AccordionTrigger>Videos</AccordionTrigger>
+							<Accordion type='single' collapsible='true'>
+								<AccordionItem value={videos[0].title} disabled={true}>
+									<AccordionTrigger>
+										Videos{" "}
+										<span className='text-muted-foreground text-xs'>
+											{" "}
+											(Coming Soon)
+										</span>
+									</AccordionTrigger>
 									{videos.map((video, index) => (
 										<AccordionContent key={`${video.url}-${video.title}`}>
 											<Button
@@ -71,12 +75,16 @@ const Resource = ({
 								</AccordionItem>
 								<AccordionItem value='item-1'>
 									<AccordionTrigger>Documents</AccordionTrigger>
-									<AccordionContent>
-										{/* <Button variant="link" onClick={()=>handleIput("video-ghost","pdf")}>Link</Button> */}
-										<blockquote className='mt-6 border-l-2 pl-6 italic'>
-											Coming Soon...
-										</blockquote>
-									</AccordionContent>
+									{pdfs.map((pdf, index) => (
+										<AccordionContent key={`${pdf.name}-${index}`}>
+											<Button
+												variant='link'
+												onClick={() => handleIput(pdf.name, "pdf")}
+											>
+												{pdf.name}
+											</Button>
+										</AccordionContent>
+									))}
 								</AccordionItem>
 							</Accordion>
 						</div>
