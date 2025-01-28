@@ -4,7 +4,6 @@ import ChatHeader from "@/components/ChatHeader";
 import ChatInput from "@/components/ChatInput";
 import ChatMessages from "@/components/ChatMessages";
 import Quiz from "@/components/quiz/Quiz";
-import Resource from "@/components/resource/Resource";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import useChat from "@/hooks/useChat";
 
@@ -34,14 +33,14 @@ const ChatInterface = () => {
 		<div className='flex flex-col w-full mx-auto p-4 h-full max-h-[500px]'>
 			<ChatHeader />
 			<div className='flex flex-col lg:flex-row w-full mx-auto p-4 h-full'>
-				<Resource
+				{/* <Resource
 					setInput={setInput}
 					setResourceType={setResourceType}
 					setSelectedResource={setSelectedResource}
 					videos={videos}
 					pdfs={pdfs}
 					className='w-full lg:w-1/4'
-				/>
+				/> */}
 				<Card className='flex-grow flex flex-col w-full lg:w-2/4 h-full mb-4 lg:mb-0 lg:mx-4'>
 					<CardHeader>
 						<CardTitle>Edubot</CardTitle>

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+//const API_URL = "http://localhost:8000";
+const API_URL = "https://bilal-420-edubot-hf.hf.space";
+
 const useQuiz = (content) => {
 	const [quiz, setQuiz] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -22,7 +25,7 @@ const useQuiz = (content) => {
 		setError(null);
 
 		try {
-			const response = await fetch("http://localhost:8000/generate_quiz", {
+			const response = await fetch(`${API_URL}/generate_quiz`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

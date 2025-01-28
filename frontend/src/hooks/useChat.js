@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-const API_URL = "http://localhost:8000";
-//const API_URL = "https://bilal-420-edubot-hf.hf.space";
+//const API_URL = "http://localhost:8000";
+const API_URL = "https://bilal-420-edubot-hf.hf.space";
 
 const extractVideoId = (url) => {
 	const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -136,7 +136,7 @@ const useChat = () => {
 		formData.append("file", file);
 
 		try {
-			const response = await fetch("http://localhost:8000/upload/pdf", {
+			const response = await fetch(`${API_URL}/upload/pdf`, {
 				method: "POST",
 				body: formData,
 			});
