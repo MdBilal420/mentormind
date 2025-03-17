@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranscription } from "../hooks/useTranscription";
 import InputSidebar from "./InputSidebar";
 import OutputSection from "./OutputSection";
 
@@ -9,11 +10,21 @@ export default function Dashboard() {
 	const [activeTab, setActiveTab] = useState("transcription");
 	const [outputData, setOutputData] = useState({
 		transcription: "",
+		sentences: [],
 		summary: "",
+		questions: [],
+		audioUrl: "",
 		loading: false,
+		error: null,
 	});
 	const [inputType, setInputType] = useState("audio");
 	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const {
+		transcriptionData,
+		processAudioFile,
+		clearTranscription,
+		retryTranscription,
+	} = useTranscription();
 
 	// Close sidebar by default on mobile
 	useEffect(() => {
@@ -33,42 +44,103 @@ export default function Dashboard() {
 		return () => window.removeEventListener("resize", handleResize);
 	}, []);
 
+	// When transcription data changes, update output data
+	useEffect(() => {
+		setOutputData((prev) => ({
+			...prev,
+			transcription: transcriptionData.transcription,
+			sentences: transcriptionData.sentences,
+			audioUrl: transcriptionData.audioUrl,
+			loading: transcriptionData.loading,
+			error: transcriptionData.error,
+		}));
+	}, [transcriptionData]);
+
 	const handleProcessContent = async (data) => {
 		// Close sidebar on mobile after processing
 		if (window.innerWidth < 768) {
 			setSidebarOpen(false);
 		}
 
-		// This will be implemented to handle API calls to our backend
 		try {
-			setOutputData({ ...outputData, loading: true });
+			// Set loading state
+			setOutputData((prev) => ({ ...prev, loading: true, error: null }));
 
-			// Simulate API call with timeout
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			// Handle the processed data from InputSidebar
+			if (data.type === "audio") {
+				// Process audio file and get transcription
+				const result = await processAudioFile(data.file);
 
-			// Mock data for now
-			setOutputData({
-				transcription: "This is a sample transcription of the lecture...",
-				summary:
-					"The lecture covered key concepts related to AI and machine learning...",
-				questions: [
-					{
-						question: "What is the main purpose of machine learning?",
-						options: [
-							"To replace human intelligence",
-							"To enhance data processing capabilities",
-							"To learn patterns from data without explicit programming",
-							"To create sentient AI systems",
-						],
-						correctAnswer: 2,
-					},
-					// More questions...
-				],
-				loading: false,
-			});
+				// If successful, generate summary and quiz
+				if (result) {
+					// Generate summary (mock for now)
+					const summary = `Summary of: ${result.transcription.substring(
+						0,
+						100
+					)}...`;
+
+					// Generate quiz questions (mock for now)
+					const questions = [
+						{
+							question: "What is the main topic of this lecture?",
+							options: [
+								"Option A from the content",
+								"Option B from the content",
+								"Option C from the content",
+								"Option D from the content",
+							],
+							correctAnswer: 0,
+						},
+						{
+							question: "Which concept was discussed first in the lecture?",
+							options: ["Concept A", "Concept B", "Concept C", "Concept D"],
+							correctAnswer: 1,
+						},
+					];
+
+					// Update output data with all the information
+					setOutputData((prev) => ({
+						...prev,
+						summary,
+						questions,
+						loading: false,
+					}));
+				}
+			} else if (data.type === "pdf") {
+				// Handle PDF processing results
+				setOutputData({
+					transcription: "PDF content will be displayed here...",
+					summary: "PDF summary will be displayed here...",
+					questions: [],
+					loading: false,
+					error: null,
+				});
+			} else if (data.type === "youtube") {
+				// Handle YouTube processing results
+				setOutputData({
+					transcription: "YouTube transcription will be displayed here...",
+					summary: "YouTube summary will be displayed here...",
+					questions: [],
+					loading: false,
+					error: null,
+				});
+			}
 		} catch (error) {
 			console.error("Error processing content:", error);
-			setOutputData({ ...outputData, loading: false });
+			setOutputData((prev) => ({
+				...prev,
+				loading: false,
+				error: error.message || "An unexpected error occurred",
+			}));
+		}
+	};
+
+	const handleRetry = async () => {
+		try {
+			setActiveTab("transcription"); // Switch to transcription tab
+			await retryTranscription();
+		} catch (error) {
+			console.error("Error retrying transcription:", error);
 		}
 	};
 
@@ -111,6 +183,7 @@ export default function Dashboard() {
 					onProcessContent={handleProcessContent}
 					inputType={inputType}
 					setInputType={setInputType}
+					error={outputData.error}
 				/>
 			</div>
 
@@ -128,6 +201,7 @@ export default function Dashboard() {
 					data={outputData}
 					activeTab={activeTab}
 					setActiveTab={setActiveTab}
+					onRetry={handleRetry}
 				/>
 			</div>
 		</div>

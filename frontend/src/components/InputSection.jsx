@@ -16,6 +16,7 @@ export default function InputSection({
 	const [youtubeUrl, setYoutubeUrl] = useState("");
 	const [loading, setLoading] = useState(false);
 
+	console.log(inputType, "inputType", "audioFile", audioFile, "pdfFile");
 	const handleSubmit = async () => {
 		setLoading(true);
 
@@ -24,6 +25,7 @@ export default function InputSection({
 
 		if (inputType === "audio") {
 			data = { type: "audio", file: audioFile };
+			console.log(data);
 		} else if (inputType === "pdf") {
 			data = { type: "pdf", file: pdfFile };
 		} else if (inputType === "youtube") {

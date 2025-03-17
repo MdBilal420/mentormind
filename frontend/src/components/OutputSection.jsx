@@ -1,8 +1,79 @@
-import { motion } from "framer-motion";
-import { FileText, Loader2 } from "lucide-react";
+import AskTutorTab from "./AskTutorTab";
+import QuizTab from "./QuizTab";
+import SummaryTab from "./SummaryTab";
+import TranscriptionTab from "./TranscriptionTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
-export default function OutputSection({ data, activeTab, setActiveTab }) {
+// Helper function to format time in MM:SS format
+const formatTime = (seconds) => {
+	const mins = Math.floor(seconds / 60);
+	const secs = Math.floor(seconds % 60);
+	return `${mins.toString().padStart(2, "0")}:${secs
+		.toString()
+		.padStart(2, "0")}`;
+};
+
+// Component for displaying transcription with timestamps
+const TimestampedTranscription = ({ words }) => {
+	if (!words || words.length === 0) {
+		return (
+			<p className='text-emerald-600 italic'>No timestamped data available</p>
+		);
+	}
+
+	// Group words into sentences
+	const sentences = [];
+	let currentSentence = { words: [], startTime: words[0].start };
+
+	words.forEach((word) => {
+		currentSentence.words.push(word);
+		// If word ends with punctuation, start a new sentence
+		if (word.word.match(/[.!?]$/)) {
+			sentences.push({
+				...currentSentence,
+				endTime: word.end,
+				text: currentSentence.words.map((w) => w.word).join(" "),
+			});
+			currentSentence = { words: [], startTime: word.end };
+		}
+	});
+
+	// Add the last sentence if it's not empty and doesn't end with punctuation
+	if (currentSentence.words.length > 0) {
+		sentences.push({
+			...currentSentence,
+			endTime: currentSentence.words[currentSentence.words.length - 1].end,
+			text: currentSentence.words.map((w) => w.word).join(" "),
+		});
+	}
+
+	return (
+		<div className='space-y-4'>
+			{sentences.map((sentence, idx) => (
+				<div
+					key={idx}
+					className='flex group hover:bg-emerald-50/50 rounded-lg p-2 transition-colors'
+				>
+					<div className='flex-shrink-0 w-16 text-emerald-500 font-mono text-xs pt-1'>
+						{formatTime(sentence.startTime)}
+					</div>
+					<div className='flex-grow'>
+						<p className='text-sm md:text-base text-emerald-900'>
+							{sentence.text}
+						</p>
+					</div>
+				</div>
+			))}
+		</div>
+	);
+};
+
+export default function OutputSection({
+	data,
+	activeTab,
+	setActiveTab,
+	onRetry,
+}) {
 	return (
 		<div className='h-full flex flex-col'>
 			<div className='mb-4'>
@@ -47,193 +118,38 @@ export default function OutputSection({ data, activeTab, setActiveTab }) {
 			</div>
 
 			<div className='flex-1 bg-white/30 backdrop-blur-lg rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-3 md:p-6 border border-white/40'>
-				{data.loading ? (
-					<div className='flex flex-col items-center justify-center h-full'>
-						<Loader2 className='h-10 w-10 md:h-12 md:w-12 animate-spin text-emerald-600' />
-						<p className='mt-4 text-emerald-700'>Processing your content...</p>
+				<Tabs
+					value={activeTab}
+					onValueChange={setActiveTab}
+					className='h-full flex flex-col'
+				>
+					<div className='sr-only'>
+						<TabsList>
+							<TabsTrigger value='transcription'>Transcription</TabsTrigger>
+							<TabsTrigger value='summary'>Summary</TabsTrigger>
+							<TabsTrigger value='ask'>Ask Tutor</TabsTrigger>
+							<TabsTrigger value='quiz'>Test Knowledge</TabsTrigger>
+						</TabsList>
 					</div>
-				) : (
-					<Tabs
-						value={activeTab}
-						onValueChange={setActiveTab}
-						className='h-full flex flex-col'
-					>
-						<div className='sr-only'>
-							<TabsList>
-								<TabsTrigger value='transcription'>Transcription</TabsTrigger>
-								<TabsTrigger value='summary'>Summary</TabsTrigger>
-								<TabsTrigger value='ask'>Ask Tutor</TabsTrigger>
-								<TabsTrigger value='quiz'>Test Knowledge</TabsTrigger>
-							</TabsList>
-						</div>
 
-						<div className='flex-1'>
-							<TabsContent value='transcription' className='h-full'>
-								<motion.div
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5 }}
-									className='bg-white/50 rounded-lg p-3 md:p-4 h-full overflow-y-auto'
-								>
-									{data.transcription ? (
-										<p className='text-sm md:text-base text-emerald-900 whitespace-pre-line'>
-											{data.transcription}
-										</p>
-									) : (
-										<div className='flex flex-col items-center justify-center h-full text-center'>
-											<div className='w-12 h-12 md:w-16 md:h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4'>
-												<Loader2 className='h-6 w-6 md:h-8 md:w-8 text-emerald-500' />
-											</div>
-											<p className='text-emerald-800 font-medium'>
-												No content to transcribe yet
-											</p>
-											<p className='text-xs md:text-sm text-emerald-600 mt-2'>
-												Upload audio, a PDF, or provide a YouTube URL to get
-												started
-											</p>
-										</div>
-									)}
-								</motion.div>
-							</TabsContent>
+					<div className='flex-1'>
+						<TabsContent value='transcription' className='h-full'>
+							<TranscriptionTab data={data} onRetry={onRetry} />
+						</TabsContent>
 
-							<TabsContent value='summary' className='h-full'>
-								<motion.div
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5 }}
-									className='bg-white/50 rounded-lg p-3 md:p-4 h-full overflow-y-auto'
-								>
-									{data.summary ? (
-										<p className='text-sm md:text-base text-emerald-900 whitespace-pre-line'>
-											{data.summary}
-										</p>
-									) : (
-										<div className='flex flex-col items-center justify-center h-full text-center'>
-											<div className='w-12 h-12 md:w-16 md:h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4'>
-												<FileText className='h-6 w-6 md:h-8 md:w-8 text-emerald-500' />
-											</div>
-											<p className='text-emerald-800 font-medium'>
-												No summary available yet
-											</p>
-											<p className='text-xs md:text-sm text-emerald-600 mt-2'>
-												Process content to generate a summary
-											</p>
-										</div>
-									)}
-								</motion.div>
-							</TabsContent>
+						<TabsContent value='summary' className='h-full'>
+							<SummaryTab data={data} />
+						</TabsContent>
 
-							<TabsContent value='ask' className='h-full'>
-								<motion.div
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5 }}
-									className='bg-white/50 rounded-lg p-3 md:p-4 h-full flex flex-col'
-								>
-									<div className='flex-1 overflow-y-auto mb-3 md:mb-4 bg-white/70 rounded-lg p-3 md:p-4'>
-										<div className='space-y-3 md:space-y-4'>
-											{data.transcription ? (
-												<>
-													<div className='flex justify-end'>
-														<div className='bg-emerald-100 rounded-lg p-2 md:p-3 max-w-[80%]'>
-															<p className='text-xs md:text-sm text-emerald-800'>
-																What are the key points of this lecture?
-															</p>
-														</div>
-													</div>
-													<div className='flex justify-start'>
-														<div className='bg-white rounded-lg p-2 md:p-3 max-w-[80%] shadow-sm'>
-															<p className='text-xs md:text-sm text-emerald-900'>
-																Based on the lecture, the key points are...
-															</p>
-														</div>
-													</div>
-												</>
-											) : (
-												<div className='flex flex-col items-center justify-center h-full text-center py-6 md:py-8'>
-													<p className='text-xs md:text-sm text-emerald-600 italic'>
-														Ask questions about the lecture once content is
-														processed
-													</p>
-												</div>
-											)}
-										</div>
-									</div>
+						<TabsContent value='ask' className='h-full'>
+							<AskTutorTab data={data} />
+						</TabsContent>
 
-									<div className='flex gap-2'>
-										<textarea
-											className='flex-1 p-2 md:p-3 text-xs md:text-sm rounded-lg border border-emerald-200 focus:ring focus:ring-emerald-300 focus:border-emerald-500 outline-none resize-none'
-											rows={2}
-											placeholder='Ask a question about the lecture...'
-										></textarea>
-										<button className='px-3 py-2 bg-emerald-600 text-white text-xs md:text-sm rounded-lg hover:bg-emerald-700 transition-colors self-end'>
-											Ask
-										</button>
-									</div>
-								</motion.div>
-							</TabsContent>
-
-							<TabsContent value='quiz' className='h-full'>
-								<motion.div
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5 }}
-									className='bg-white/50 rounded-lg p-3 md:p-4 h-full overflow-y-auto'
-								>
-									{data.questions ? (
-										<div className='space-y-4 md:space-y-6'>
-											{data.questions.map((q, idx) => (
-												<div
-													key={idx}
-													className='bg-white/70 rounded-lg p-3 md:p-4 shadow-sm'
-												>
-													<p className='font-medium text-xs md:text-sm text-emerald-800 mb-2 md:mb-3'>
-														{idx + 1}. {q.question}
-													</p>
-													<div className='space-y-1 md:space-y-2'>
-														{q.options.map((option, optIdx) => (
-															<div key={optIdx} className='flex items-center'>
-																<input
-																	type='radio'
-																	name={`question-${idx}`}
-																	id={`q${idx}-opt${optIdx}`}
-																	className='mr-2'
-																/>
-																<label
-																	htmlFor={`q${idx}-opt${optIdx}`}
-																	className='text-xs md:text-sm text-emerald-700'
-																>
-																	{option}
-																</label>
-															</div>
-														))}
-													</div>
-												</div>
-											))}
-											<button className='px-3 py-2 bg-emerald-600 text-white text-xs md:text-sm rounded-lg hover:bg-emerald-700 transition-colors'>
-												Check Answers
-											</button>
-										</div>
-									) : (
-										<div className='flex flex-col items-center justify-center h-full text-center'>
-											<div className='w-12 h-12 md:w-16 md:h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4'>
-												<span className='text-xl md:text-2xl font-bold text-emerald-500'>
-													?
-												</span>
-											</div>
-											<p className='text-emerald-800 font-medium'>
-												No quiz questions available yet
-											</p>
-											<p className='text-xs md:text-sm text-emerald-600 mt-2'>
-												Process content to generate quiz questions
-											</p>
-										</div>
-									)}
-								</motion.div>
-							</TabsContent>
-						</div>
-					</Tabs>
-				)}
+						<TabsContent value='quiz' className='h-full'>
+							<QuizTab data={data} />
+						</TabsContent>
+					</div>
+				</Tabs>
 			</div>
 		</div>
 	);
