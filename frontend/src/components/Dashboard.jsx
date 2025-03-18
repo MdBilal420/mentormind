@@ -26,6 +26,7 @@ export default function Dashboard() {
 		clearTranscription,
 		retryTranscription,
 	} = useTranscription();
+	const [chatMessages, setChatMessages] = useState([]);
 
 	// Close sidebar by default on mobile
 	useEffect(() => {
@@ -221,6 +222,8 @@ export default function Dashboard() {
 					activeTab={activeTab}
 					setActiveTab={setActiveTab}
 					onRetry={handleRetry}
+					chatMessages={chatMessages}
+					setChatMessages={setChatMessages}
 				/>
 			</div>
 

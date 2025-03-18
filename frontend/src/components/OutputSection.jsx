@@ -73,6 +73,8 @@ export default function OutputSection({
 	activeTab,
 	setActiveTab,
 	onRetry,
+	chatMessages,
+	setChatMessages,
 }) {
 	return (
 		<div className='h-full flex flex-col'>
@@ -146,7 +148,11 @@ export default function OutputSection({
 						</TabsContent>
 
 						<TabsContent value='ask' className='h-full'>
-							<AskTutorTab data={data} />
+							<AskTutorTab
+								data={data}
+								messages={chatMessages}
+								setMessages={setChatMessages}
+							/>
 						</TabsContent>
 					</div>
 				</Tabs>

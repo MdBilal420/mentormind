@@ -9,6 +9,11 @@ import shutil
 import uuid
 from deepgram import DeepgramClient, PrerecordedOptions
 from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
+import json
+import asyncio
+from enum import Enum
+import time
 
 
 app = FastAPI()
@@ -47,6 +52,14 @@ if GROQ_API_KEY:
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Define the teaching modes
+class TeachingMode(str, Enum):
+    SOCRATIC = "socratic"
+    FIVE_YEAR_OLD = "five_year_old"
+    HIGH_SCHOOL = "high_school"
+    COLLEGE = "college"
+    PHD = "phd"
 
 # endpoint returns hello world
 @app.get("/")
@@ -433,6 +446,203 @@ async def generate_quiz_endpoint(request: QuizRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating quiz: {str(e)}")
+
+# Define the chat message model
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+# Define the chat request model
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+    transcript: str
+
+# Define the chat response model
+class ChatResponse(BaseModel):
+    message: str
+    
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_with_tutor(request: ChatRequest):
+    """
+    Endpoint to chat with an AI tutor about the transcript content
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+        
+        if not request.messages or len(request.messages) == 0:
+            raise HTTPException(status_code=400, detail="At least one message is required")
+        
+        # Format messages for the LLM
+        formatted_messages = [
+            {"role": "system", "content": get_socratic_system_prompt()},
+        ]
+        
+        # Add transcript context
+        context_message = {
+            "role": "system", 
+            "content": f"The following is the transcript of a lecture that the student wants to discuss:\n\n{request.transcript[:8000]}"
+        }
+        formatted_messages.append(context_message)
+        
+        # Add conversation history
+        for msg in request.messages:
+            formatted_messages.append({"role": msg.role, "content": msg.content})
+        
+        # Generate response
+        response = generate_socratic_response(formatted_messages)
+        
+        return {
+            "message": response
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating response: {str(e)}")
+
+def get_socratic_system_prompt():
+    """
+    Create the system prompt for the Socratic tutor
+    """
+    return """You are a Socratic tutor. Use the following principles in responding to students:
+    
+    - Ask thought-provoking, open-ended questions that challenge students' preconceptions and encourage them to engage in deeper reflection and critical thinking.
+    - Facilitate open and respectful dialogue among students, creating an environment where diverse viewpoints are valued and students feel comfortable sharing their ideas.
+    - Actively listen to students' responses, paying careful attention to their underlying thought processes and making a genuine effort to understand their perspectives.
+    - Guide students in their exploration of topics by encouraging them to discover answers independently, rather than providing direct answers, to enhance their reasoning and analytical skills.
+    - Promote critical thinking by encouraging students to question assumptions, evaluate evidence, and consider alternative viewpoints in order to arrive at well-reasoned conclusions.
+    - Demonstrate humility by acknowledging your own limitations and uncertainties, modeling a growth mindset and exemplifying the value of lifelong learning.
+
+    Base your responses on the following transcription content. Your goal is not to simply provide answers, but to help the student think critically about the material through Socratic questioning.
+
+    Keep your responses concise (3-5 sentences maximum) unless elaboration is necessary to explain a complex concept.
+    """
+
+def generate_socratic_response(messages):
+    """
+    Generate a Socratic tutor response using the Groq API
+    """
+    if not GROQ_API_KEY or not groq_client:
+        # Return mock response if Groq API is not available
+        return "I'd be happy to discuss this lecture with you! What specific aspect would you like to explore further? Is there a concept you find particularly challenging or interesting? (Note: This is a mock response as the Groq API key is not configured)"
+    
+    try:
+        # Call Groq API to generate the response
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using Llama 3.3 70B model
+            messages=messages,
+            temperature=0.7,  # Slightly higher temperature for more varied responses
+            max_tokens=1024
+        )
+        
+        # Extract the response text
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"I'm having trouble processing your question. Could you try asking in a different way? (Error: {str(e)})"
+
+@app.post("/api/chat-stream")
+async def chat_with_tutor_stream(request: ChatRequest):
+    """
+    Endpoint to chat with an AI tutor with streaming response
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+        
+        if not request.messages or len(request.messages) == 0:
+            raise HTTPException(status_code=400, detail="At least one message is required")
+        
+        # Always use the Socratic tutor system prompt
+        system_prompt = get_socratic_system_prompt()
+        
+        # Format messages for the LLM
+        formatted_messages = [
+            {"role": "system", "content": system_prompt},
+        ]
+        
+        # Add transcript context
+        context_message = {
+            "role": "system", 
+            "content": f"The following is the transcript of a lecture that the student wants to discuss:\n\n{request.transcript[:8000]}"
+        }
+        formatted_messages.append(context_message)
+        
+        # Add conversation history
+        for msg in request.messages:
+            formatted_messages.append({"role": msg.role, "content": msg.content})
+        
+        # Return streaming response
+        return StreamingResponse(
+            generate_streaming_response(formatted_messages),
+            media_type="text/event-stream"
+        )
+    
+    except Exception as e:
+        error_json = json.dumps({"error": str(e)})
+        async def error_stream():
+            yield f"data: {error_json}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+async def generate_streaming_response(messages):
+    """
+    Generate a streaming response from the model - optimized version
+    """
+    if not GROQ_API_KEY or not groq_client:
+        # Mock streaming for development without API key
+        mock_response = "I'd be happy to discuss this lecture with you! What specific aspect would you like to explore further? Is there a concept you find particularly challenging or interesting? (Note: This is a mock response as the Groq API key is not configured)"
+        
+        # Stream by blocks for better performance
+        blocks = mock_response.split('. ')
+        for block in blocks:
+            yield f"data: {json.dumps({'chunk': block + '. '})}\n\n"
+            await asyncio.sleep(0.08)  # Slightly shorter delay
+        
+        yield f"data: {json.dumps({'done': True})}\n\n"
+        return
+    
+    try:
+        # Call Groq API with streaming enabled
+        stream = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1024,
+            stream=True
+        )
+        
+        # Buffer for more efficient sending
+        buffer = ""
+        last_send_time = time.time()
+        
+        # Stream the response chunks with optimized buffering
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                buffer += content
+                
+                # Send in larger chunks or after a time threshold to reduce overhead
+                current_time = time.time()
+                should_send = (
+                    len(buffer) >= 10 or  # Send if buffer has 10+ characters
+                    '.' in buffer or      # Send if buffer contains sentence end
+                    '\n' in buffer or     # Send if buffer contains newline
+                    current_time - last_send_time > 0.2  # Send at least every 200ms
+                )
+                
+                if should_send and buffer:
+                    yield f"data: {json.dumps({'chunk': buffer})}\n\n"
+                    buffer = ""
+                    last_send_time = current_time
+        
+        # Send any remaining buffered content
+        if buffer:
+            yield f"data: {json.dumps({'chunk': buffer})}\n\n"
+        
+        # Signal completion
+        yield f"data: {json.dumps({'done': True})}\n\n"
+    
+    except Exception as e:
+        error_message = f"I'm having trouble processing your question. Could you try asking in a different way? (Error: {str(e)})"
+        yield f"data: {json.dumps({'chunk': error_message})}\n\n"
+        yield f"data: {json.dumps({'done': True})}\n\n"
 
 
 
