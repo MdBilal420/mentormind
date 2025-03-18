@@ -75,49 +75,55 @@ export default function Dashboard() {
 				// If successful, generate summary and quiz
 				if (result) {
 					// Call backend to generate summary
-					try {
-						const summaryResponse = await fetch(
-							"http://localhost:8000/api/generate-summary",
-							{
-								method: "POST",
-								headers: {
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify({
-									transcript: result.transcription,
-								}),
-							}
-						);
-
-						if (summaryResponse.ok) {
-							const summaryData = await summaryResponse.json();
-
-							// Update output data with summary
-							setOutputData((prev) => ({
-								...prev,
-								summary: summaryData.success
-									? summaryData.summary
-									: "Failed to generate summary",
-								loading: false,
-							}));
-						} else {
-							// Handle API error
-							console.error("Summary API error:", await summaryResponse.text());
-							setOutputData((prev) => ({
-								...prev,
-								summary: "Could not generate summary. Please try again later.",
-								loading: false,
-							}));
+					const summaryResponse = await fetch(
+						"http://localhost:8000/api/generate-summary",
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								transcript: result.transcription,
+							}),
 						}
-					} catch (error) {
-						console.error("Error generating summary:", error);
-						setOutputData((prev) => ({
-							...prev,
-							summary:
-								"Error generating summary. Please check your connection and try again.",
-							loading: false,
-						}));
+					);
+
+					let summary = "";
+					if (summaryResponse.ok) {
+						const summaryData = await summaryResponse.json();
+						summary = summaryData.success
+							? summaryData.summary
+							: "Failed to generate summary";
 					}
+
+					// Call backend to generate quiz questions
+					const quizResponse = await fetch(
+						"http://localhost:8000/api/generate-quiz",
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								transcript: result.transcription,
+								num_questions: 5, // Request 5 questions
+							}),
+						}
+					);
+
+					let questions = [];
+					if (quizResponse.ok) {
+						const quizData = await quizResponse.json();
+						questions = quizData.success ? quizData.questions : [];
+					}
+
+					// Update output data with all information
+					setOutputData((prev) => ({
+						...prev,
+						summary,
+						questions,
+						loading: false,
+					}));
 				}
 			} else if (data.type === "pdf") {
 				// Handle PDF processing results
