@@ -30,6 +30,20 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 if not DEEPGRAM_API_KEY:
     raise ValueError("Missing DEEPGRAM_API_KEY environment variable")
 
+# Get Groq API key from environment variable
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    print("Warning: GROQ_API_KEY environment variable not set. Summary generation will be limited.")
+
+# Initialize Groq client if API key is available
+groq_client = None
+if GROQ_API_KEY:
+    try:
+        from groq import Groq
+        groq_client = Groq(api_key=GROQ_API_KEY)
+    except ImportError:
+        print("Warning: Groq package not installed. Install with: pip install groq")
+
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -147,66 +161,116 @@ async def transcribe_audio_endpoint(file: UploadFile = File(...)):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-# Response model for generating summary
+def generate_bullet_summary(transcript):
+    """
+    Generate a bullet-point summary of a transcript using Groq API
+    """
+    if not GROQ_API_KEY or not groq_client:
+        # Return mock summary if Groq API is not available
+        return """
+        • This is a mock summary for development purposes.
+        • Please set the GROQ_API_KEY environment variable for actual summary generation.
+        • The real summary would extract key points from the transcript.
+        • It would be organized as a bullet-point list for easy reading.
+        """
+        
+    try:
+        # Define the prompt for generating bullet point summaries
+        prompt = f"""
+        Create a concise and well-organized bullet point summary for the provided transcript.
+
+        - Identify key points and important details from the transcript.
+        - Summarize information in clear and concise bullet points.
+        - Ensure that the bullet points capture the essence of the conversation or content.
+        - Organize the bullets logically to maintain the flow of information.
+
+        # Steps
+
+        1. Read through the transcript to understand the main topics and key details.
+        2. Identify and note down significant points, arguments, or data.
+        3. Summarize these points into clear, concise bullet points.
+        4. Ensure logical flow and organization of bullet points.
+        5. Review the bullet points to ensure they are representative of the transcript's content.
+
+        # Output Format
+
+        - Summary should be in bullet points
+        - Concise and clear sentences
+        - Organized logically following the sequence of topics in the transcript
+
+        # Examples
+
+        ## Example Input
+        [Transcript of a conversation or presentation.]
+
+        ## Example Output
+        - Introduction of the main topic
+        - Key argument 1: [Summary of the argument]
+        - Key argument 2: [Summary of the argument]
+        - Closing remarks: [Summary of conclusions]
+        (Note: In a realistic example, more detailed key points should be included.) 
+
+        # Notes
+
+        - Focus on clarity and brevity.
+        - Avoid redundant information.
+        
+        Transcript:
+        {transcript}
+        """
+        
+        # Call Groq API to generate the summary
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using newer Llama 3.3 70B model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that creates concise, well-organized bullet point summaries."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,  # Lower temperature for more focused responses
+            max_tokens=1024
+        )
+        
+        # Extract the summary from the response
+        summary = response.choices[0].message.content
+        return summary
+    except Exception as e:
+        return f"Error generating summary: {str(e)}"
+
+# Define request and response models for the summary endpoint
 class SummaryRequest(BaseModel):
-    text: str
+    transcript: str
 
-@app.post("/api/generate-summary")
-async def generate_summary(request: SummaryRequest):
-    """
-    Endpoint to generate a summary from transcription text
-    """
-    # This is a placeholder - you would integrate with an AI service
-    # like OpenAI to generate the actual summary
-    
-    # Mock implementation
-    summary = f"Summary of transcription: {request.text[:100]}..."
-    
-    return {
-        "success": True,
-        "summary": summary
-    }
+class SummaryResponse(BaseModel):
+    success: bool
+    summary: str
 
-# Response model for generating questions
-class QuizRequest(BaseModel):
-    text: str
-    num_questions: Optional[int] = 5
-
-@app.post("/api/generate-quiz")
-async def generate_quiz(request: QuizRequest):
+@app.post("/api/generate-summary", response_model=SummaryResponse)
+async def generate_summary_endpoint(request: SummaryRequest):
     """
-    Endpoint to generate quiz questions from transcription text
+    Endpoint to generate a bullet-point summary from a transcript
     """
-    # Mock implementation - replace with actual AI-powered question generation
-    questions = [
-        {
-            "question": "What is the main topic of this lecture?",
-            "options": [
-                "Option A from the content",
-                "Option B from the content",
-                "Option C from the content",
-                "Option D from the content"
-            ],
-            "correctAnswer": 0
-        },
-        {
-            "question": "Which concept was discussed first in the lecture?",
-            "options": [
-                "Concept A",
-                "Concept B",
-                "Concept C",
-                "Concept D"
-            ],
-            "correctAnswer": 1
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+            
+        # Truncate very long transcripts to prevent API limits
+        # Most LLM APIs have context limits
+        max_length = 16000  # Adjust based on the model's context window
+        truncated_transcript = request.transcript[:max_length]
+        if len(request.transcript) > max_length:
+            truncated_transcript += "\n[Transcript truncated due to length...]"
+            
+        summary = generate_bullet_summary(truncated_transcript)
+        
+        return {
+            "success": True,
+            "summary": summary
         }
-    ]
-    
-    return {
-        "success": True,
-        "questions": questions
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating summary: {str(e)}")
 
-# Add more endpoints for other functionalities like YouTube processing
+
+
 
 
 

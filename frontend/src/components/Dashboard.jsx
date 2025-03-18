@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Toaster } from "sonner";
 import { useTranscription } from "../hooks/useTranscription";
 import InputSidebar from "./InputSidebar";
 import OutputSection from "./OutputSection";
@@ -73,38 +74,50 @@ export default function Dashboard() {
 
 				// If successful, generate summary and quiz
 				if (result) {
-					// Generate summary (mock for now)
-					const summary = `Summary of: ${result.transcription.substring(
-						0,
-						100
-					)}...`;
+					// Call backend to generate summary
+					try {
+						const summaryResponse = await fetch(
+							"http://localhost:8000/api/generate-summary",
+							{
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({
+									transcript: result.transcription,
+								}),
+							}
+						);
 
-					// Generate quiz questions (mock for now)
-					const questions = [
-						{
-							question: "What is the main topic of this lecture?",
-							options: [
-								"Option A from the content",
-								"Option B from the content",
-								"Option C from the content",
-								"Option D from the content",
-							],
-							correctAnswer: 0,
-						},
-						{
-							question: "Which concept was discussed first in the lecture?",
-							options: ["Concept A", "Concept B", "Concept C", "Concept D"],
-							correctAnswer: 1,
-						},
-					];
+						if (summaryResponse.ok) {
+							const summaryData = await summaryResponse.json();
 
-					// Update output data with all the information
-					setOutputData((prev) => ({
-						...prev,
-						summary,
-						questions,
-						loading: false,
-					}));
+							// Update output data with summary
+							setOutputData((prev) => ({
+								...prev,
+								summary: summaryData.success
+									? summaryData.summary
+									: "Failed to generate summary",
+								loading: false,
+							}));
+						} else {
+							// Handle API error
+							console.error("Summary API error:", await summaryResponse.text());
+							setOutputData((prev) => ({
+								...prev,
+								summary: "Could not generate summary. Please try again later.",
+								loading: false,
+							}));
+						}
+					} catch (error) {
+						console.error("Error generating summary:", error);
+						setOutputData((prev) => ({
+							...prev,
+							summary:
+								"Error generating summary. Please check your connection and try again.",
+							loading: false,
+						}));
+					}
 				}
 			} else if (data.type === "pdf") {
 				// Handle PDF processing results
@@ -204,6 +217,14 @@ export default function Dashboard() {
 					onRetry={handleRetry}
 				/>
 			</div>
+
+			<Toaster
+				position='top-right'
+				toastOptions={{
+					duration: 3000,
+					className: "rounded-md shadow-md",
+				}}
+			/>
 		</div>
 	);
 }
