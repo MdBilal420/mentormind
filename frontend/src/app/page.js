@@ -1,8 +1,5 @@
-import Image from "next/image";
-import ChatInterface from "./page/chat-interface";
+import Dashboard from "../components/Dashboard";
 
 export default function Home() {
-  return (   
-        <ChatInterface />
-  );
+	return <Dashboard />;
 }

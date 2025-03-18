@@ -1,89 +1,108 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const useQuiz = () => {
-  const [quiz, setQuiz] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+//const API_URL = "http://localhost:8000";
+const API_URL = "https://bilal-420-edubot-hf.hf.space";
 
-  const generateQuiz = async (content) => {
-    setLoading(true);
-    setError(null);
+const useQuiz = (content) => {
+	const [quiz, setQuiz] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState(null);
+	const [userAnswer, setUserAnswer] = useState(null);
 
-    try {
-      const response = await fetch("http://localhost:8000/generate_quiz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: content }),
-      });
+	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+	const [score, setScore] = useState(0);
+	const [isCompleted, setIsCompleted] = useState(false);
 
-      if (!response.ok) {
-        throw new Error("Failed to generate quiz");
-      }
+	useEffect(() => {
+		if (content) {
+			resetQuiz();
+			setQuiz([]);
+		}
+	}, [content]);
 
-      const data = await response.json();
-      //   console.log(data, "DATA", response);
-      setQuiz(data.questions);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+	const generateQuiz = async () => {
+		setLoading(true);
+		setError(null);
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswer, setUserAnswer] = useState(null);
-  const [score, setScore] = useState(0);
+		try {
+			const response = await fetch(`${API_URL}/generate_quiz`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ content: content }),
+			});
 
-  const handleAnswer = () => {
-    const selectedOption = quiz[currentQuestionIndex].options.findIndex(
-      (option) => option === userAnswer
-    );
-    const opt =
-      selectedOption === 0
-        ? "a"
-        : selectedOption === 1
-        ? "b"
-        : selectedOption === 2
-        ? "c"
-        : "d";
-    if (opt === quiz[currentQuestionIndex].correct_answer) {
-      setScore(score + 1);
-    }
-    if (currentQuestionIndex < quiz.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setUserAnswer(null);
-    } else {
-      alert(`Quiz finished! Your score: ${score + 1}/${quiz.length}`);
-      resetQuiz();
-    }
-  };
+			if (!response.ok) {
+				throw new Error("Failed to generate quiz");
+			}
 
-  const resetQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setUserAnswer(null);
-  };
+			const data = await response.json();
+			//   console.log(data, "DATA", response);
+			setQuiz(data.questions);
+		} catch (err) {
+			setError(err.message);
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  const handleQuizStart = () => {
-    generateQuiz(content);
-  };
+	const handleAnswer = () => {
+		const selectedOption = quiz[currentQuestionIndex].options.findIndex(
+			(option) => option === userAnswer
+		);
+		const opt =
+			selectedOption === 0
+				? "a"
+				: selectedOption === 1
+				? "b"
+				: selectedOption === 2
+				? "c"
+				: "d";
+		if (opt === quiz[currentQuestionIndex].correct_answer) {
+			setScore(score + 1);
+		}
+		if (currentQuestionIndex < quiz.length - 1) {
+			setCurrentQuestionIndex(currentQuestionIndex + 1);
+			setUserAnswer(null);
+		} else {
+			setIsCompleted(true);
+			const percentage = Math.round(((score + 1) / quiz.length) * 100);
+			alert(`Quiz finished! Your score: ${percentage}%`);
+			resetQuiz();
+			setQuiz([]);
+		}
+	};
 
-  return [
-    {
-      quiz,
-      loading,
-      error,
-      currentQuestionIndex,
-      userAnswer,
-      score,
-    },
-    {
-      handleQuizStart,
-      handleAnswer,
-    },
-  ];
+	const resetQuiz = () => {
+		setCurrentQuestionIndex(0);
+		setScore(0);
+		setUserAnswer(null);
+		setIsCompleted(false);
+	};
+
+	const handleQuizStart = () => {
+		setIsCompleted(false);
+		generateQuiz(content);
+	};
+
+	return [
+		{
+			quiz,
+			loading,
+			error,
+			currentQuestionIndex,
+			userAnswer,
+			score,
+			isCompleted,
+		},
+		{
+			handleQuizStart,
+			handleAnswer,
+			setUserAnswer,
+			resetQuiz,
+		},
+	];
 };
 
 export default useQuiz;
