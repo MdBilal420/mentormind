@@ -12,7 +12,9 @@ export default function InputSidebar({
 }) {
 	const [audioFile, setAudioFile] = useState(null);
 	const [pdfFile, setPdfFile] = useState(null);
-	const [youtubeUrl, setYoutubeUrl] = useState("");
+	const [youtubeUrl, setYoutubeUrl] = useState(
+		"https://www.youtube.com/watch?v=lt4OsgmUTGI"
+	);
 	const [loading, setLoading] = useState(false);
 	const [localError, setLocalError] = useState(null);
 
