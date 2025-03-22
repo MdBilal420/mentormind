@@ -4,13 +4,10 @@ It efficiently converts audio recordings and YouTube videos into comprehensive l
 ## 🌟 Features
 
 - **Audio Transcription**: Upload audio recordings and get accurate transcriptions with timestamps
-- **PDF Text Extraction**: Extract and analyze text from uploaded PDF files
 - **YouTube Processing**: Generate transcripts and educational content from YouTube videos
 - **AI-Generated Summaries**: Create concise, bullet-point summaries of lectures
 - **Interactive Quizzes**: Test knowledge with automatically generated multiple-choice questions
 - **Ask Tutor**: Get answers to questions about lecture content using AI
-- **Modern UI**: Clean, responsive glassmorphic interface with a soothing green theme
-
 
 ## 🛠️ Technologies Used
 
