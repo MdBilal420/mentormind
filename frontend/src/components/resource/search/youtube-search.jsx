@@ -12,7 +12,7 @@ const YoutubeSearch = ({ handleVideoClick }) => {
 			const response = await fetch(
 				`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(
 					query
-				)}&key=AIzaSyApT_Ei_WBhWWrcqWzjokoGJ0lWMAs26Ew&type=video`
+				)}&key=${apiKey}&type=video`
 			);
 
 			if (!response.ok) {
