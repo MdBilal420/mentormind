@@ -28,6 +28,8 @@ export default function Dashboard() {
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
 
+	console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
+
 	// Close sidebar by default on mobile
 	useEffect(() => {
 		const handleResize = () => {
@@ -77,7 +79,7 @@ export default function Dashboard() {
 				if (result) {
 					// Call backend to generate summary
 					const summaryResponse = await fetch(
-						"http://localhost:8000/api/generate-summary",
+						`${process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
 						{
 							method: "POST",
 							headers: {
@@ -99,7 +101,7 @@ export default function Dashboard() {
 
 					// Call backend to generate quiz questions
 					const quizResponse = await fetch(
-						"http://localhost:8000/api/generate-quiz",
+						`${process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
 						{
 							method: "POST",
 							headers: {
@@ -138,7 +140,7 @@ export default function Dashboard() {
 			} else if (data.type === "youtube") {
 				// Handle YouTube URL
 				const youtubeResponse = await fetch(
-					"http://localhost:8000/api/youtube-transcribe",
+					`${process.env.NEXT_PUBLIC_API_URL}/api/youtube-transcribe`,
 					{
 						method: "POST",
 						headers: {
@@ -172,7 +174,7 @@ export default function Dashboard() {
 
 					// Call backend to generate summary
 					const summaryResponse = await fetch(
-						"http://localhost:8000/api/generate-summary",
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
 						{
 							method: "POST",
 							headers: {
@@ -194,7 +196,7 @@ export default function Dashboard() {
 
 					// Call backend to generate quiz questions
 					const quizResponse = await fetch(
-						"http://localhost:8000/api/generate-quiz",
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
 						{
 							method: "POST",
 							headers: {

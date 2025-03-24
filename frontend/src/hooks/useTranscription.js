@@ -49,10 +49,13 @@ export function useTranscription() {
 			formData.append("file", file);
 
 			// Make API call to backend
-			const response = await fetch("http://localhost:8000/api/transcribe", {
-				method: "POST",
-				body: formData,
-			});
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/transcribe`,
+				{
+					method: "POST",
+					body: formData,
+				}
+			);
 
 			// Handle HTTP errors
 			if (!response.ok) {
