@@ -3,7 +3,8 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --turbopack --port 3001",
+		"dev": "cross-env NEXT_PUBLIC_API_URL=http://localhost:8000 next dev --turbopack --port 3001",
+		"dev:prod": "cross-env NEXT_PUBLIC_API_URL=https://bilal-420-edubot-hf.hf.space next dev --turbopack --port 3001",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint"
@@ -31,6 +32,7 @@
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3",
+		"cross-env": "^7.0.3",
 		"eslint": "^9",
 		"eslint-config-next": "15.1.4",
 		"postcss": "^8",
