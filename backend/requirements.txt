@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+pydantic
 redis 
 groq
 python-multipart 
@@ -8,3 +9,5 @@ pymupdf
 python-dotenv
 youtube_transcript_api==0.6.2
 google-api-python-client==2.100.0
+requests
+deepgram-sdk

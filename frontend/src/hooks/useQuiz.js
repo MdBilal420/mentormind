@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 
-//const API_URL = "http://localhost:8000";
-const API_URL = "https://bilal-420-edubot-hf.hf.space";
-
 const useQuiz = (content) => {
 	const [quiz, setQuiz] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -25,13 +22,16 @@ const useQuiz = (content) => {
 		setError(null);
 
 		try {
-			const response = await fetch(`${API_URL}/generate_quiz`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ content: content }),
-			});
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/generate_quiz`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ content: content }),
+				}
+			);
 
 			if (!response.ok) {
 				throw new Error("Failed to generate quiz");

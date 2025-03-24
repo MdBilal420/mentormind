@@ -112,7 +112,7 @@ export default function AskTutorTab({ data }) {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [error, setError] = useState(null);
 	const [streamingResponse, setStreamingResponse] = useState("");
-	const [chatMode, setChatMode] = useState("socratic"); // "socratic" or "direct"
+	const [chatMode, setChatMode] = useState("direct"); // "socratic" or "direct"
 	const abortControllerRef = useRef(null);
 	const messagesEndRef = useRef(null);
 	const chatContainerRef = useRef(null);
@@ -215,8 +215,8 @@ export default function AskTutorTab({ data }) {
 			// Choose endpoint based on the chat mode
 			const endpoint =
 				chatMode === "socratic"
-					? "http://localhost:8000/api/chat-stream"
-					: "http://localhost:8000/api/chat-direct-stream";
+					? `${process.env.NEXT_PUBLIC_API_URL}/api/chat-stream`
+					: `${process.env.NEXT_PUBLIC_API_URL}/api/chat-direct-stream`;
 
 			// Send request to backend with streaming
 			const response = await fetch(endpoint, {
@@ -392,20 +392,6 @@ export default function AskTutorTab({ data }) {
 						<button
 							onClick={() => {
 								if (isStreaming) cancelStream();
-								setChatMode("socratic");
-								if (messages.length > 0) handleNewConversation();
-							}}
-							className={`px-3 py-1 text-xs rounded-md transition-colors ${
-								chatMode === "socratic"
-									? "bg-emerald-100 text-emerald-800"
-									: "text-gray-600 hover:bg-gray-100"
-							}`}
-						>
-							Socratic
-						</button>
-						<button
-							onClick={() => {
-								if (isStreaming) cancelStream();
 								setChatMode("direct");
 								if (messages.length > 0) handleNewConversation();
 							}}
@@ -416,6 +402,20 @@ export default function AskTutorTab({ data }) {
 							}`}
 						>
 							AskGPT
+						</button>
+						<button
+							onClick={() => {
+								if (isStreaming) cancelStream();
+								setChatMode("socratic");
+								if (messages.length > 0) handleNewConversation();
+							}}
+							className={`px-3 py-1 text-xs rounded-md transition-colors ${
+								chatMode === "socratic"
+									? "bg-emerald-100 text-emerald-800"
+									: "text-gray-600 hover:bg-gray-100"
+							}`}
+						>
+							Socratic
 						</button>
 					</div>
 
