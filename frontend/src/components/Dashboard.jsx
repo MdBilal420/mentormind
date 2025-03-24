@@ -79,7 +79,7 @@ export default function Dashboard() {
 				if (result) {
 					// Call backend to generate summary
 					const summaryResponse = await fetch(
-						`${process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
 						{
 							method: "POST",
 							headers: {
@@ -101,7 +101,7 @@ export default function Dashboard() {
 
 					// Call backend to generate quiz questions
 					const quizResponse = await fetch(
-						`${process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
 						{
 							method: "POST",
 							headers: {
