@@ -1,8 +1,67 @@
-import { AlertCircle, FileText, Loader2, Upload, Youtube } from "lucide-react";
+import {
+	AlertCircle,
+	CheckCircle,
+	FileText,
+	Loader2,
+	Play,
+	Upload,
+	Youtube,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+
+// Sample audio files data
+const sampleAudioFiles = [
+	{
+		id: 1,
+		name: "What is Photosynthesis",
+		description: "Learn about the process of photosynthesis",
+		url: "/samples/track1.mp3",
+	},
+	{
+		id: 2,
+		name: "What is Quantum Computing",
+		description: "",
+		url: "/samples/track2.mp3",
+	},
+];
+
+// Add new sample data for PDFs
+const samplePDFFiles = [
+	{
+		id: 1,
+		name: "Introduction to Biology",
+		description: "Basic concepts of biology",
+		url: "/samples/intro-biology.pdf",
+	},
+	{
+		id: 2,
+		name: "Physics Fundamentals",
+		description: "Core physics concepts explained",
+		url: "/samples/physics.pdf",
+	},
+];
+
+// Update the YouTube samples data to include thumbnails
+const sampleYouTubeVideos = [
+	{
+		id: 1,
+		name: "What is DNA and How Does it Work?",
+		description: "Learn about DNA structure and function",
+		url: "https://www.youtube.com/watch?v=zwibgNGe4aY",
+		thumbnail: "https://img.youtube.com/vi/zwibgNGe4aY/mqdefault.jpg",
+	},
+	{
+		id: 2,
+		name: "Solar System 101",
+		description:
+			"Learn facts about the solar system’s genesis, plus its planets, moons, and asteroids.",
+		url: "https://www.youtube.com/watch?v=libKVRa01L8",
+		thumbnail: "https://img.youtube.com/vi/libKVRa01L8/mqdefault.jpg",
+	},
+];
 
 export default function InputSidebar({
 	onProcessContent,
@@ -17,8 +76,102 @@ export default function InputSidebar({
 	);
 	const [loading, setLoading] = useState(false);
 	const [localError, setLocalError] = useState(null);
+	const [selectedSampleId, setSelectedSampleId] = useState(null);
+	const [loadingSample, setLoadingSample] = useState(false);
+	const [selectedPDFSampleId, setSelectedPDFSampleId] = useState(null);
+	const [selectedYouTubeSampleId, setSelectedYouTubeSampleId] = useState(null);
 
 	console.log(inputType, "inputType", "audioFile", audioFile, "pdfFile");
+
+	const handleSampleSelect = async (sample) => {
+		try {
+			setLoadingSample(true);
+			setLocalError(null);
+			setSelectedSampleId(sample.id);
+
+			// Fetch the actual audio file
+			const response = await fetch(sample.url);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// Get the audio file as a blob
+			const audioBlob = await response.blob();
+
+			// Create a proper File object with the actual audio content
+			const file = new File([audioBlob], `${sample.name}.mp3`, {
+				type: "audio/mpeg",
+				lastModified: new Date().getTime(),
+			});
+
+			// Verify the file has content
+			if (file.size === 0) {
+				throw new Error("File is empty");
+			}
+
+			setAudioFile(file);
+			console.log("Sample file loaded:", file); // Debug log
+		} catch (error) {
+			console.error("Error loading sample file:", error);
+			setLocalError("Failed to load sample file: " + error.message);
+			setSelectedSampleId(null);
+			setAudioFile(null);
+		} finally {
+			setLoadingSample(false);
+		}
+	};
+
+	const handleSamplePDFSelect = async (sample) => {
+		try {
+			setLoadingSample(true);
+			setLocalError(null);
+			setSelectedPDFSampleId(sample.id);
+
+			const response = await fetch(sample.url);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const pdfBlob = await response.blob();
+			const file = new File([pdfBlob], `${sample.name}.pdf`, {
+				type: "application/pdf",
+				lastModified: new Date().getTime(),
+			});
+
+			if (file.size === 0) {
+				throw new Error("File is empty");
+			}
+
+			setPdfFile(file);
+		} catch (error) {
+			console.error("Error loading sample PDF:", error);
+			setLocalError("Failed to load sample PDF: " + error.message);
+			setSelectedPDFSampleId(null);
+			setPdfFile(null);
+		} finally {
+			setLoadingSample(false);
+		}
+	};
+
+	// Add a helper function to extract video ID from YouTube URL
+	const getYouTubeVideoId = (url) => {
+		const regExp =
+			/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+		const match = url.match(regExp);
+		return match && match[2].length === 11 ? match[2] : null;
+	};
+
+	// Update handleSampleYouTubeSelect to include video ID extraction
+	const handleSampleYouTubeSelect = (sample) => {
+		setSelectedYouTubeSampleId(sample.id);
+		setYoutubeUrl(sample.url);
+
+		// You could also update the sample data with the actual thumbnail URL
+		const videoId = getYouTubeVideoId(sample.url);
+		if (videoId) {
+			sample.thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+		}
+	};
 
 	const handleFileUpload = (event, type) => {
 		// Clear any previous errors
@@ -87,6 +240,77 @@ export default function InputSidebar({
 		}
 	};
 
+	// Modify the SampleFiles component to handle thumbnails
+	const SampleFiles = ({ type, samples, onSelect, selectedId }) => (
+		<div className='mt-6 border-t border-emerald-100 pt-4'>
+			<h3 className='text-sm font-medium text-emerald-800 mb-3'>
+				Sample {type} Files
+			</h3>
+			<div className='space-y-2'>
+				{samples.map((sample) => (
+					<button
+						key={sample.id}
+						onClick={() => onSelect(sample)}
+						disabled={loadingSample}
+						className={`w-full p-3 rounded-lg border transition-all flex items-start gap-3
+							${
+								selectedId === sample.id
+									? "border-emerald-500 bg-emerald-50"
+									: "border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/50"
+							}
+							${loadingSample ? "opacity-50 cursor-not-allowed" : ""}
+						`}
+					>
+						{type === "YouTube" ? (
+							// YouTube thumbnail container
+							<div className='relative flex-shrink-0 w-24 h-16 rounded-md overflow-hidden'>
+								<img
+									src={sample.thumbnail}
+									alt={sample.name}
+									className='object-cover w-full h-full'
+								/>
+								{loadingSample && selectedId === sample.id ? (
+									<div className='absolute inset-0 bg-emerald-500/20 flex items-center justify-center'>
+										<Loader2 className='h-5 w-5 text-emerald-500 animate-spin' />
+									</div>
+								) : (
+									selectedId === sample.id && (
+										<div className='absolute inset-0 bg-emerald-500/20 flex items-center justify-center'>
+											<CheckCircle className='h-5 w-5 text-emerald-500' />
+										</div>
+									)
+								)}
+							</div>
+						) : (
+							// Icon for non-YouTube samples
+							<>
+								{loadingSample && selectedId === sample.id ? (
+									<Loader2 className='h-5 w-5 text-emerald-500 animate-spin flex-shrink-0 mt-0.5' />
+								) : selectedId === sample.id ? (
+									<CheckCircle className='h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5' />
+								) : type === "Audio" ? (
+									<Play className='h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5' />
+								) : (
+									<FileText className='h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5' />
+								)}
+							</>
+						)}
+						<div className='text-left flex-1'>
+							<p className='text-sm font-medium text-emerald-900'>
+								{sample.name}
+							</p>
+							{sample.description && (
+								<p className='text-xs text-emerald-600 mt-0.5'>
+									{sample.description}
+								</p>
+							)}
+						</div>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+
 	return (
 		<div className='flex-1 flex flex-col'>
 			<h2 className='text-lg font-semibold text-emerald-800 mb-4'>
@@ -106,7 +330,13 @@ export default function InputSidebar({
 				value={inputType}
 				onValueChange={(value) => {
 					setInputType(value);
-					setLocalError(null); // Clear errors on tab change
+					setLocalError(null);
+					setSelectedSampleId(null);
+					setSelectedPDFSampleId(null);
+					setSelectedYouTubeSampleId(null);
+					setAudioFile(null);
+					setPdfFile(null);
+					setYoutubeUrl("");
 				}}
 				className='flex-1 flex flex-col'
 			>
@@ -173,6 +403,14 @@ export default function InputSidebar({
 								</div>
 							)}
 						</div>
+
+						{/* Add the sample files section only in audio tab */}
+						<SampleFiles
+							type='Audio'
+							samples={sampleAudioFiles}
+							onSelect={handleSampleSelect}
+							selectedId={selectedSampleId}
+						/>
 					</TabsContent>
 
 					<TabsContent value='pdf' className='h-full'>
@@ -198,6 +436,13 @@ export default function InputSidebar({
 								</div>
 							)}
 						</div>
+
+						<SampleFiles
+							type='PDF'
+							samples={samplePDFFiles}
+							onSelect={handleSamplePDFSelect}
+							selectedId={selectedPDFSampleId}
+						/>
 					</TabsContent>
 
 					<TabsContent value='youtube' className='h-full'>
@@ -216,9 +461,24 @@ export default function InputSidebar({
 								Enter the URL of a YouTube lecture or educational video
 							</p>
 						</div>
+
+						<SampleFiles
+							type='YouTube'
+							samples={sampleYouTubeVideos}
+							onSelect={handleSampleYouTubeSelect}
+							selectedId={selectedYouTubeSampleId}
+						/>
 					</TabsContent>
 				</div>
 			</Tabs>
+
+			{/* Show selected file info */}
+			{audioFile && (
+				<div className='mt-2 text-xs text-emerald-600'>
+					Selected file: {audioFile.name} (
+					{(audioFile.size / 1024 / 1024).toFixed(2)} MB)
+				</div>
+			)}
 
 			<div className='mt-4 md:mt-6'>
 				<Button
