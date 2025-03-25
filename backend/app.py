@@ -17,7 +17,9 @@ import time
 import subprocess
 import requests
 import re
-
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
+from supadata import Supadata, SupadataError
 
 app = FastAPI()
 
@@ -42,6 +44,13 @@ if not DEEPGRAM_API_KEY:
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("Warning: GROQ_API_KEY environment variable not set. Summary generation will be limited.")
+
+SUPADATA_API_KEY = os.getenv("SUPADATA_API_KEY")
+if not SUPADATA_API_KEY:
+    raise ValueError("Missing SUPADATA_API_KEY environment variable")
+
+supadata = Supadata(api_key=SUPADATA_API_KEY)
+
 
 # Initialize Groq client if API key is available
 groq_client = None
@@ -708,7 +717,7 @@ def get_youtube_subtitles(youtube_url):
 class YouTubeRequest(BaseModel):
     youtube_url: str
 
-@app.post("/api/youtube-transcribe")
+@app.post("/api/youtube-transcribe2")
 async def youtube_transcribe_endpoint(request: YouTubeRequest):
     """
     Endpoint to get transcription from a YouTube video URL (without timestamps)
@@ -858,6 +867,65 @@ async def chat_with_direct_stream(request: ChatRequest):
         async def error_stream():
             yield f"data: {error_json}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+def extract_video_id(youtube_url):
+    """Extract video ID from YouTube URL"""
+    if "youtu.be/" in youtube_url:
+        return youtube_url.split("youtu.be/")[1].split("?")[0]
+    elif "youtube.com/watch?v=" in youtube_url:
+        return youtube_url.split("v=")[1].split("&")[0]
+    elif "youtube.com/v/" in youtube_url:
+        return youtube_url.split("/v/")[1].split("?")[0]
+    else:
+        return None
+
+@app.post("/api/youtube-transcribe")
+async def youtube_transcribe_v2_endpoint(request: YouTubeRequest):
+    """
+    Alternative endpoint to get transcription using youtube-transcript-api
+    """
+    try:
+        print("Starting transcription process...")
+        if not request.youtube_url:
+            raise HTTPException(status_code=400, detail="YouTube URL is required")
+            
+        # Validate URL format
+        if not request.youtube_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL format")
+        
+        # Extract video ID
+        video_id = extract_video_id(request.youtube_url)
+        if not video_id:
+            raise HTTPException(status_code=400, detail="Could not extract video ID from URL")
+            
+        try:
+            text_transcript = supadata.youtube.transcript(
+                video_id=video_id,
+                text=True,
+                lang="en"
+            )
+            
+            formatted_transcript = text_transcript.content
+            
+            return {
+                "success": True,
+                "video_title": "YouTube Video",  # Default title
+                "transcription": formatted_transcript
+            }
+            
+        except Exception as e:
+            error_message = str(e)
+            raise HTTPException(
+            status_code=500,
+            detail=error_message)
+            
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing YouTube transcription: {str(e)}")
+
+
 
 
 
