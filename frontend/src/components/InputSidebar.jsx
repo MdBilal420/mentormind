@@ -48,10 +48,10 @@ const samplePDFFiles = [
 const sampleYouTubeVideos = [
 	{
 		id: 1,
-		name: "What is DNA and How Does it Work?",
+		name: "What is DNA?",
 		description: "Learn about DNA structure and function",
-		url: "https://www.youtube.com/watch?v=zwibgNGe4aY",
-		thumbnail: "https://img.youtube.com/vi/zwibgNGe4aY/mqdefault.jpg",
+		url: "https://www.youtube.com/watch?v=S9aWBbVypeU",
+		thumbnail: "https://img.youtube.com/vi/S9aWBbVypeU/mqdefault.jpg",
 	},
 	{
 		id: 2,
