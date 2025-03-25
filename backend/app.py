@@ -917,7 +917,7 @@ async def youtube_transcribe_v2_endpoint(request: YouTubeRequest):
             error_message = str(e)
             raise HTTPException(
             status_code=500,
-            detail=error_message)
+            detail="Error processing YouTube transcription")
             
                 
     except HTTPException:
