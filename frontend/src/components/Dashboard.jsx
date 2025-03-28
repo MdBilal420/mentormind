@@ -28,6 +28,8 @@ export default function Dashboard() {
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
 
+	console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
+
 	// Close sidebar by default on mobile
 	useEffect(() => {
 		const handleResize = () => {
@@ -77,7 +79,7 @@ export default function Dashboard() {
 				if (result) {
 					// Call backend to generate summary
 					const summaryResponse = await fetch(
-						"http://localhost:8000/api/generate-summary",
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
 						{
 							method: "POST",
 							headers: {
@@ -99,7 +101,7 @@ export default function Dashboard() {
 
 					// Call backend to generate quiz questions
 					const quizResponse = await fetch(
-						"http://localhost:8000/api/generate-quiz",
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
 						{
 							method: "POST",
 							headers: {
@@ -136,14 +138,91 @@ export default function Dashboard() {
 					error: null,
 				});
 			} else if (data.type === "youtube") {
-				// Handle YouTube processing results
-				setOutputData({
-					transcription: "YouTube transcription will be displayed here...",
-					summary: "YouTube summary will be displayed here...",
-					questions: [],
-					loading: false,
-					error: null,
-				});
+				// Handle YouTube URL
+				const youtubeResponse = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/youtube-transcribe`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							youtube_url: data.url,
+						}),
+					}
+				);
+
+				if (!youtubeResponse.ok) {
+					const errorData = await youtubeResponse.json();
+					throw new Error(
+						errorData.detail || "Failed to fetch YouTube transcription"
+					);
+				}
+
+				const youtubeData = await youtubeResponse.json();
+
+				// If successful, generate summary and quiz from the transcription
+				if (youtubeData.success) {
+					// Update transcription data with just the transcription text
+					setOutputData((prev) => ({
+						...prev,
+						transcription: youtubeData.transcription,
+						sentences: [], // No sentences/timestamps for YouTube
+						videoTitle: youtubeData.video_title,
+						loading: true, // Still loading until summary and quiz are done
+					}));
+
+					// Call backend to generate summary
+					const summaryResponse = await fetch(
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-summary`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								transcript: youtubeData.transcription,
+							}),
+						}
+					);
+
+					let summary = "";
+					if (summaryResponse.ok) {
+						const summaryData = await summaryResponse.json();
+						summary = summaryData.success
+							? summaryData.summary
+							: "Failed to generate summary";
+					}
+
+					// Call backend to generate quiz questions
+					const quizResponse = await fetch(
+						`${process.env.NEXT_PUBLIC_API_URL}/api/generate-quiz`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								transcript: youtubeData.transcription,
+								num_questions: 5, // Request 5 questions
+							}),
+						}
+					);
+
+					let questions = [];
+					if (quizResponse.ok) {
+						const quizData = await quizResponse.json();
+						questions = quizData.success ? quizData.questions : [];
+					}
+
+					// Update output data with all information
+					setOutputData((prev) => ({
+						...prev,
+						summary,
+						questions,
+						loading: false,
+					}));
+				}
 			}
 		} catch (error) {
 			console.error("Error processing content:", error);
@@ -162,6 +241,32 @@ export default function Dashboard() {
 		} catch (error) {
 			console.error("Error retrying transcription:", error);
 		}
+	};
+
+	// Helper function to convert timestamp format (HH:MM:SS) to seconds
+	const parseTimeToSeconds = (timestamp) => {
+		if (!timestamp) return 0;
+
+		const parts = timestamp.split(":");
+		let seconds = 0;
+
+		// Handle hours, minutes, seconds
+		if (parts.length === 3) {
+			seconds =
+				parseInt(parts[0]) * 3600 +
+				parseInt(parts[1]) * 60 +
+				parseInt(parts[2]);
+		}
+		// Handle minutes, seconds
+		else if (parts.length === 2) {
+			seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+		}
+		// Handle just seconds
+		else if (parts.length === 1) {
+			seconds = parseInt(parts[0]);
+		}
+
+		return seconds;
 	};
 
 	return (

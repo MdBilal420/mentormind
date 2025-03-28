@@ -14,7 +14,12 @@ import json
 import asyncio
 from enum import Enum
 import time
-
+import subprocess
+import requests
+import re
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
+from supadata import Supadata, SupadataError
 
 app = FastAPI()
 
@@ -39,6 +44,13 @@ if not DEEPGRAM_API_KEY:
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("Warning: GROQ_API_KEY environment variable not set. Summary generation will be limited.")
+
+SUPADATA_API_KEY = os.getenv("SUPADATA_API_KEY")
+if not SUPADATA_API_KEY:
+    raise ValueError("Missing SUPADATA_API_KEY environment variable")
+
+supadata = Supadata(api_key=SUPADATA_API_KEY)
+
 
 # Initialize Groq client if API key is available
 groq_client = None
@@ -84,8 +96,7 @@ async def transcribe_audio(file_path):
         }
     
     try:
-        # Only import Deepgram if API key is available
-        from deepgram import DeepgramClient, PrerecordedOptions
+        
         
         # Initialize the Deepgram client
         deepgram = DeepgramClient(DEEPGRAM_API_KEY)
@@ -643,6 +654,278 @@ async def generate_streaming_response(messages):
         error_message = f"I'm having trouble processing your question. Could you try asking in a different way? (Error: {str(e)})"
         yield f"data: {json.dumps({'chunk': error_message})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
+
+def get_youtube_subtitles(youtube_url):
+    try:
+        # Run yt-dlp to get subtitles using subprocess
+        result = subprocess.run(
+            ["python", "-m", "yt_dlp", "--write-auto-sub", "--sub-format", "vtt", 
+             "--skip-download", "--print-json", youtube_url],
+            capture_output=True, text=True
+        )
+        
+        if result.returncode != 0:
+            return f"Error: Failed to fetch subtitles. {result.stderr}"
+        
+        json_output = json.loads(result.stdout)
+        subtitles = json_output.get("automatic_captions", {}).get("en", [])
+        
+        if not subtitles:
+            return "Error: No subtitles found for this video"
+        
+        subtitle_url = subtitles[-1]["url"]
+        
+        response = requests.get(subtitle_url)
+        if response.status_code != 200:
+            return f"Error: Failed to download subtitles. Status code: {response.status_code}"
+        
+        vtt_content = response.text
+        
+        # Extract text content (no timestamps)
+        pattern = r'\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\s*(.*?)(?=\n\d{2}:\d{2}:\d{2}\.\d{3}|$)'
+        matches = re.findall(pattern, vtt_content, re.DOTALL)
+        
+        # Process and clean up the text with better formatting
+        full_transcript = ""
+        current_sentence = ""
+        
+        for text in matches:
+            # Clean up the text
+            clean_text = re.sub(r'align:(?:start|middle|end)\s+position:\d+%\s*', '', text)
+            clean_text = re.sub(r'<[^>]+>', '', clean_text)
+            clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+            
+            if clean_text:
+                # Ensure proper spacing between segments
+                if full_transcript and not full_transcript.endswith(('.', '!', '?', '"', "'", ':', ';')):
+                    full_transcript += " "
+                full_transcript += clean_text
+        
+        # Improve sentence capitalization and spacing
+        full_transcript = re.sub(r'([.!?])\s*([a-z])', lambda m: m.group(1) + ' ' + m.group(2).upper(), full_transcript)
+        
+        return {
+            "full_transcript": full_transcript.strip(),
+            "video_title": json_output.get("title", "YouTube Video")
+        }
+        
+    except Exception as e:
+        return f"Error processing YouTube subtitles: {str(e)}"
+
+
+# Define request model for YouTube URL
+class YouTubeRequest(BaseModel):
+    youtube_url: str
+
+@app.post("/api/youtube-transcribe2")
+async def youtube_transcribe_endpoint(request: YouTubeRequest):
+    """
+    Endpoint to get transcription from a YouTube video URL (without timestamps)
+    """
+    try:
+        if not request.youtube_url:
+            raise HTTPException(status_code=400, detail="YouTube URL is required")
+            
+        # Validate URL format (simple check)
+        if not request.youtube_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL format")
+            
+        # Get the transcription
+        result = get_youtube_subtitles(request.youtube_url)
+        
+        # Check if the result is an error message
+        if isinstance(result, str) and result.startswith("Error"):
+            raise HTTPException(status_code=500, detail=result)
+            
+        # Format the response without timestamps/sentences
+        return {
+            "success": True,
+            "video_title": result.get("video_title", "YouTube Video"),
+            "transcription": result.get("full_transcript", "")
+        }
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing YouTube transcription: {str(e)}")
+
+def get_direct_system_prompt():
+    """
+    Create the system prompt for the direct answer mode
+    """
+    return """You are a helpful assistant that answers questions directly and accurately.
+    
+    - Provide clear, concise answers to the user's questions based on the transcription content.
+    - If the answer is explicitly stated in the transcription, provide it directly.
+    - If the answer requires inference, make reasonable inferences based solely on the transcription content.
+    - If the question cannot be answered from the transcription, politely explain that the information is not available.
+    - Include relevant details from the transcription to support your answers.
+    - Keep your responses informative but concise, focusing on the most relevant information.
+    
+    Base your responses solely on the following transcription content.
+    """
+
+@app.post("/api/chat-direct")
+async def chat_with_direct_answers(request: ChatRequest):
+    """
+    Endpoint to chat with AI that provides direct answers about the transcript content
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+        
+        if not request.messages or len(request.messages) == 0:
+            raise HTTPException(status_code=400, detail="At least one message is required")
+        
+        # Format messages for the LLM
+        formatted_messages = [
+            {"role": "system", "content": get_direct_system_prompt()},
+        ]
+        
+        # Add transcript context
+        context_message = {
+            "role": "system", 
+            "content": f"The following is the transcript of a lecture that the user is asking about:\n\n{request.transcript[:8000]}"
+        }
+        formatted_messages.append(context_message)
+        
+        # Add conversation history
+        for msg in request.messages:
+            formatted_messages.append({"role": msg.role, "content": msg.content})
+        
+        # Generate response
+        response = generate_direct_response(formatted_messages)
+        
+        return {
+            "message": response
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating response: {str(e)}")
+
+def generate_direct_response(messages):
+    """
+    Generate a direct answer response using the Groq API
+    """
+    if not GROQ_API_KEY or not groq_client:
+        # Return mock response if Groq API is not available
+        return "Based on the transcript, I can tell you that... (Note: This is a mock response as the Groq API key is not configured)"
+    
+    try:
+        # Call Groq API to generate the response
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using Llama 3.3 70B model
+            messages=messages,
+            temperature=0.3,  # Lower temperature for more factual responses
+            max_tokens=1024
+        )
+        
+        # Extract the response text
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"I'm having trouble processing your question. Could you try asking in a different way? (Error: {str(e)})"
+
+@app.post("/api/chat-direct-stream")
+async def chat_with_direct_stream(request: ChatRequest):
+    """
+    Endpoint to chat with direct answers with streaming response
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+        
+        if not request.messages or len(request.messages) == 0:
+            raise HTTPException(status_code=400, detail="At least one message is required")
+        
+        # Use the direct answer system prompt
+        system_prompt = get_direct_system_prompt()
+        
+        # Format messages for the LLM
+        formatted_messages = [
+            {"role": "system", "content": system_prompt},
+        ]
+        
+        # Add transcript context
+        context_message = {
+            "role": "system", 
+            "content": f"The following is the transcript of a lecture that the user is asking about:\n\n{request.transcript[:8000]}"
+        }
+        formatted_messages.append(context_message)
+        
+        # Add conversation history
+        for msg in request.messages:
+            formatted_messages.append({"role": msg.role, "content": msg.content})
+        
+        # Return streaming response
+        return StreamingResponse(
+            generate_streaming_response(formatted_messages),
+            media_type="text/event-stream"
+        )
+    
+    except Exception as e:
+        error_json = json.dumps({"error": str(e)})
+        async def error_stream():
+            yield f"data: {error_json}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+def extract_video_id(youtube_url):
+    """Extract video ID from YouTube URL"""
+    if "youtu.be/" in youtube_url:
+        return youtube_url.split("youtu.be/")[1].split("?")[0]
+    elif "youtube.com/watch?v=" in youtube_url:
+        return youtube_url.split("v=")[1].split("&")[0]
+    elif "youtube.com/v/" in youtube_url:
+        return youtube_url.split("/v/")[1].split("?")[0]
+    else:
+        return None
+
+@app.post("/api/youtube-transcribe")
+async def youtube_transcribe_v2_endpoint(request: YouTubeRequest):
+    """
+    Alternative endpoint to get transcription using youtube-transcript-api
+    """
+    try:
+        print("Starting transcription process...")
+        if not request.youtube_url:
+            raise HTTPException(status_code=400, detail="YouTube URL is required")
+            
+        # Validate URL format
+        if not request.youtube_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL format")
+        
+        # Extract video ID
+        video_id = extract_video_id(request.youtube_url)
+        if not video_id:
+            raise HTTPException(status_code=400, detail="Could not extract video ID from URL")
+            
+        try:
+            text_transcript = supadata.youtube.transcript(
+                video_id=video_id,
+                text=True,
+                lang="en"
+            )
+            
+            formatted_transcript = text_transcript.content
+            
+            return {
+                "success": True,
+                "video_title": "YouTube Video",  # Default title
+                "transcription": formatted_transcript
+            }
+            
+        except Exception as e:
+            error_message = str(e)
+            raise HTTPException(
+            status_code=500,
+            detail="Error processing YouTube transcription")
+            
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing YouTube transcription: {str(e)}")
+
+
 
 
 
