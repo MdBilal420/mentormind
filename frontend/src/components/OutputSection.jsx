@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import QuizTab from "./QuizTab";
 import SummaryTab from "./SummaryTab";
@@ -75,7 +76,15 @@ export default function OutputSection({
 	onRetry,
 	chatMessages,
 	setChatMessages,
+	inputType,
 }) {
+	// If we're switching away from transcription tab and input is PDF, go to summary
+	useEffect(() => {
+		if (inputType === "pdf" && activeTab === "transcription") {
+			setActiveTab("summary");
+		}
+	}, [inputType, activeTab, setActiveTab]);
+
 	return (
 		<div className='h-full flex flex-col'>
 			<div className='mb-4'>
@@ -84,18 +93,20 @@ export default function OutputSection({
 				</h2>
 
 				<div className='w-full overflow-x-auto pb-2'>
-					<Tabs
-						value={activeTab}
-						onValueChange={setActiveTab}
-						className='w-full'
-					>
-						<TabsList className='w-full flex md:grid md:grid-cols-4'>
-							<TabsTrigger
-								value='transcription'
-								className='flex-1 text-xs md:text-sm whitespace-nowrap'
-							>
-								Transcription
-							</TabsTrigger>
+					<Tabs defaultValue={activeTab}>
+						<TabsList
+							value={activeTab}
+							onValueChange={setActiveTab}
+							className='w-full'
+						>
+							{inputType !== "pdf" && (
+								<TabsTrigger
+									value='transcription'
+									className='flex-1 text-xs md:text-sm whitespace-nowrap'
+								>
+									Transcription
+								</TabsTrigger>
+							)}
 							<TabsTrigger
 								value='summary'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
@@ -127,7 +138,9 @@ export default function OutputSection({
 				>
 					<div className='sr-only'>
 						<TabsList>
-							<TabsTrigger value='transcription'>Transcription</TabsTrigger>
+							{inputType !== "pdf" && (
+								<TabsTrigger value='transcription'>Transcription</TabsTrigger>
+							)}
 							<TabsTrigger value='summary'>Summary</TabsTrigger>
 							<TabsTrigger value='quiz'>Test Knowledge</TabsTrigger>
 							<TabsTrigger value='ask'>Ask Tutor</TabsTrigger>
@@ -135,9 +148,11 @@ export default function OutputSection({
 					</div>
 
 					<div className='flex-1'>
-						<TabsContent value='transcription' className='h-full'>
-							<TranscriptionTab data={data} onRetry={onRetry} />
-						</TabsContent>
+						{inputType !== "pdf" && (
+							<TabsContent value='transcription' className='h-full'>
+								<TranscriptionTab data={data} onRetry={onRetry} />
+							</TabsContent>
+						)}
 
 						<TabsContent value='summary' className='h-full'>
 							<SummaryTab data={data} />

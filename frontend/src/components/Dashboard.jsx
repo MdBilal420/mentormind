@@ -329,6 +329,7 @@ export default function Dashboard() {
 					onRetry={handleRetry}
 					chatMessages={chatMessages}
 					setChatMessages={setChatMessages}
+					inputType={inputType}
 				/>
 			</div>
 
