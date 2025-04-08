@@ -20,6 +20,9 @@ import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from supadata import Supadata, SupadataError
+import PyPDF2
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 app = FastAPI()
 
@@ -218,9 +221,14 @@ def generate_bullet_summary(transcript):
 
         # Output Format
 
-        - Summary should be in bullet points
-        - Concise and clear sentences
-        - Organized logically following the sequence of topics in the transcript
+        1. Use markdown headers (#) for main sections
+        2. Use bullet points (*) for key points
+        3. Organize content into clear sections
+        4. Include:
+           - Main topics/themes
+           - Key points and arguments
+           - Important details and examples
+           - Conclusions or takeaways
 
         # Examples
 
@@ -924,6 +932,208 @@ async def youtube_transcribe_v2_endpoint(request: YouTubeRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing YouTube transcription: {str(e)}")
+
+# Add new models for PDF processing
+class PDFSummaryResponse(BaseModel):
+    success: bool
+    summary: str
+    questions: List[QuizQuestion]
+    transcript: str
+    error: Optional[str] = None
+
+@app.post("/api/process-pdf", response_model=PDFSummaryResponse)
+async def process_pdf_endpoint(file: UploadFile = File(...)):
+    """
+    Endpoint to process PDF files and generate summaries using RAG
+    """
+    try:
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="File must be a PDF")
+
+        # Create a temporary file to store the uploaded PDF
+        temp_file_path = os.path.join(UPLOAD_DIR, f"temp_{uuid.uuid4()}.pdf")
+        try:
+            # Save the uploaded file temporarily
+            with open(temp_file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            # Extract text from PDF
+            pdf_text = extract_text_from_pdf_file(temp_file_path)
+            
+            # Create chunks
+            chunks = create_chunks(pdf_text)
+            
+            if not chunks:
+                raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+
+            # Generate summary using Groq (simpler approach without RAG for now)
+            if not GROQ_API_KEY or not groq_client:
+                raise HTTPException(
+                    status_code=500, 
+                    detail="GROQ_API_KEY not configured"
+                )
+                
+            prompt = f"""
+            Create a concise and well-organized bullet point summary for the provided transcript.
+
+            - Identify key points and important details from the transcript.
+            - Summarize information in clear and concise bullet points.
+            - Ensure that the bullet points capture the essence of the conversation or content.
+            - Organize the bullets logically to maintain the flow of information.
+
+            # Steps
+
+            1. Read through the transcript to understand the main topics and key details.
+            2. Identify and note down significant points, arguments, or data.
+            3. Summarize these points into clear, concise bullet points.
+            4. Ensure logical flow and organization of bullet points.
+            5. Review the bullet points to ensure they are representative of the transcript's content.
+
+            # Output Format
+
+            1. Use markdown headers (#) for main sections
+            2. Use bullet points (*) for key points
+            3. Organize content into clear sections
+            4. Include:
+            - Main topics/themes
+            - Key points and arguments
+            - Important details and examples
+            - Conclusions or takeaways
+
+            # Examples
+
+            ## Example Input
+            [Transcript of a conversation or presentation.]
+
+            ## Example Output
+            - Introduction of the main topic
+            - Key argument 1: [Summary of the argument]
+            - Key argument 2: [Summary of the argument]
+            - Closing remarks: [Summary of conclusions]
+            (Note: In a realistic example, more detailed key points should be included.) 
+
+            # Notes
+
+            - Focus on clarity and brevity.
+            - Avoid redundant information.
+            
+            Transcript:
+            {pdf_text}
+            """
+            
+            response = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",  # Using newer Llama 3.3 70B model
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that creates concise, well-organized bullet point summaries."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,  # Lower temperature for more focused responses
+                max_tokens=1024
+            )
+
+            questions = generate_quiz_questions(pdf_text, 5)
+                
+            summary = response.choices[0].message.content
+            
+            return {
+                "success": True,
+                "transcript": pdf_text,
+                "summary": summary,
+                "questions": questions,
+                "error": None
+            }
+
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+                
+    except Exception as e:
+        return {
+            "success": False,
+            "summary": "",
+            "error": str(e)
+        }
+
+def extract_text_from_pdf_file(file_path: str) -> str:
+    """
+    Extract text from a PDF file
+    """
+    try:
+        with open(file_path, 'rb') as file:
+            # Create a PDF reader object
+            pdf_reader = PyPDF2.PdfReader(file)
+            # Join text from all pages into one string
+            text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+            return text.strip()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading PDF: {str(e)}")
+
+# Add the RAG helper functions
+def create_chunks(text: str, chunk_size: int = 500) -> List[str]:
+    """
+    Break the text into chunks of roughly chunk_size characters each.
+    """
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for word in words:
+        current_length += len(word) + 1  # +1 for space
+        if current_length > chunk_size:
+            chunks.append(" ".join(current_chunk))
+            current_chunk = [word]
+            current_length = len(word)
+        else:
+            current_chunk.append(word)
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    return chunks
+
+def get_embeddings(texts: List[str]) -> List[List[float]]:
+    """
+    Get embeddings using Hugging Face Inference API
+    """
+        
+    embeddings = []
+    batch_size = 8
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        try:
+            time.sleep(1)  # Rate limiting
+            model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            batch_embeddings = model.encode(batch)
+            embeddings.extend(batch_embeddings)
+                            
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error getting embeddings: {str(e)}"
+            )
+            
+    return embeddings
+
+def search_relevant_chunks(query_embedding: List[float],
+                         chunk_embeddings: List[List[float]],
+                         chunks: List[str],
+                         top_k: int = 3) -> List[str]:
+    """
+    Find most relevant chunks using cosine similarity
+    """
+    if not chunks or not chunk_embeddings:
+        return []
+
+    query_vec = np.array(query_embedding)
+    chunk_mat = np.array(chunk_embeddings)
+    
+    similarities = np.dot(chunk_mat, query_vec) / (
+        np.linalg.norm(chunk_mat, axis=1) * np.linalg.norm(query_vec)
+    )
+    
+    top_indices = np.argsort(similarities)[-top_k:][::-1]
+    return [chunks[i] for i in top_indices]
 
 
 

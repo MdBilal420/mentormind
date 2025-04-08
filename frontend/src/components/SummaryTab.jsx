@@ -30,43 +30,62 @@ export default function SummaryTab({ data }) {
 
 		// Split by new lines and filter out empty lines
 		const lines = summary.split("\n").filter((line) => line.trim());
-
-		// Group lines into sections (optional)
 		const sections = [];
 		let currentSection = { title: "Key Points", items: [] };
 
 		lines.forEach((line) => {
 			const trimmedLine = line.trim();
 
-			// Check if line is a bullet point
-			if (
-				trimmedLine.startsWith("•") ||
-				trimmedLine.startsWith("-") ||
-				trimmedLine.startsWith("*")
-			) {
-				// Remove the bullet character and trim
-				const content = trimmedLine.substring(1).trim();
-				currentSection.items.push(content);
-			} else if (trimmedLine.endsWith(":") && trimmedLine.length > 2) {
-				// This might be a section header
+			// Check if line is a markdown header (starts with #)
+			if (trimmedLine.startsWith("#")) {
+				// If we have items in the current section, save it
+				if (currentSection.items.length > 0) {
+					sections.push(currentSection);
+				}
+				// Create new section with header text (remove # and trim)
+				const headerText = trimmedLine.replace(/^#+\s*/, "");
+				currentSection = { title: headerText, items: [] };
+			}
+			// Check if line is a markdown bullet point
+			else if (trimmedLine.match(/^[-*•]\s+/)) {
+				// Remove bullet character and trim
+				const content = trimmedLine.replace(/^[-*•]\s+/, "");
+				if (content) {
+					currentSection.items.push(content);
+				}
+			}
+			// Check if line is a numbered point
+			else if (trimmedLine.match(/^\d+\.\s+/)) {
+				// Remove number and dot, then trim
+				const content = trimmedLine.replace(/^\d+\.\s+/, "");
+				if (content) {
+					currentSection.items.push(content);
+				}
+			}
+			// Check if line is a section title (ends with :)
+			else if (trimmedLine.endsWith(":")) {
 				if (currentSection.items.length > 0) {
 					sections.push(currentSection);
 				}
 				currentSection = { title: trimmedLine.slice(0, -1), items: [] };
-			} else {
-				// Regular line, add as a bullet point
+			}
+			// If it's not empty, treat as regular content
+			else if (trimmedLine) {
 				currentSection.items.push(trimmedLine);
 			}
 		});
 
-		// Add the last section
+		// Add the last section if it has items
 		if (currentSection.items.length > 0) {
 			sections.push(currentSection);
 		}
 
-		return sections.length > 0
-			? sections
-			: [{ title: "Summary", items: lines }];
+		// If no sections were created, create a default one
+		if (sections.length === 0) {
+			return [{ title: "Summary", items: lines.filter((line) => line.trim()) }];
+		}
+
+		return sections;
 	};
 
 	// Download as text file
