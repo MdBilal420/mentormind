@@ -1,3 +1,4 @@
+import { BookOpen, Brain, FileText, MessageCircle } from "lucide-react";
 import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import QuizTab from "./QuizTab";
@@ -49,6 +50,7 @@ export default function OutputSection({
 									value='transcription'
 									className='flex-1 text-xs md:text-sm whitespace-nowrap'
 								>
+									<FileText className='w-4 h-4 mr-2' />
 									Transcription
 								</TabsTrigger>
 							)}
@@ -56,18 +58,21 @@ export default function OutputSection({
 								value='summary'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
+								<BookOpen className='w-4 h-4 mr-2' />
 								Smart Notes
 							</TabsTrigger>
 							<TabsTrigger
 								value='quiz'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
+								<Brain className='w-4 h-4 mr-2' />
 								Practice Zone
 							</TabsTrigger>
 							<TabsTrigger
 								value='ask'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
+								<MessageCircle className='w-4 h-4 mr-2' />
 								Ask MentorMind
 							</TabsTrigger>
 						</TabsList>
@@ -84,11 +89,23 @@ export default function OutputSection({
 					<div className='sr-only'>
 						<TabsList>
 							{inputType !== "pdf" && (
-								<TabsTrigger value='transcription'>Transcription</TabsTrigger>
+								<TabsTrigger value='transcription'>
+									<FileText className='w-4 h-4 mr-2' />
+									Transcription
+								</TabsTrigger>
 							)}
-							<TabsTrigger value='summary'>Smart Notes</TabsTrigger>
-							<TabsTrigger value='quiz'>Practice Zone</TabsTrigger>
-							<TabsTrigger value='ask'>Ask MentorMind</TabsTrigger>
+							<TabsTrigger value='summary'>
+								<BookOpen className='w-4 h-4 mr-2' />
+								Smart Notes
+							</TabsTrigger>
+							<TabsTrigger value='quiz'>
+								<Brain className='w-4 h-4 mr-2' />
+								Practice Zone
+							</TabsTrigger>
+							<TabsTrigger value='ask'>
+								<MessageCircle className='w-4 h-4 mr-2' />
+								Ask MentorMind
+							</TabsTrigger>
 						</TabsList>
 					</div>
 

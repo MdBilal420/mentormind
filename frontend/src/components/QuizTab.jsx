@@ -7,12 +7,12 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Info,
-	Loader2,
 	RefreshCw,
 	Trophy,
 	XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import LoadingSteps from "./LoadingSteps";
 
 export default function QuizTab({ data }) {
 	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -20,6 +20,21 @@ export default function QuizTab({ data }) {
 	const [showResults, setShowResults] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [expandedQuestions, setExpandedQuestions] = useState({});
+	const [loadingStep, setLoadingStep] = useState(0);
+
+	// Update the useEffect to simulate loading steps
+	useEffect(() => {
+		if (data.loading) {
+			setLoadingStep(0);
+			const timer1 = setTimeout(() => setLoadingStep(1), 1000);
+			const timer2 = setTimeout(() => setLoadingStep(2), 2000);
+
+			return () => {
+				clearTimeout(timer1);
+				clearTimeout(timer2);
+			};
+		}
+	}, [data.loading]);
 
 	// Toggle expanded state for a question in results view
 	const toggleExpandQuestion = (idx) => {
@@ -134,8 +149,10 @@ export default function QuizTab({ data }) {
 	if (data.loading) {
 		return (
 			<div className='flex flex-col items-center justify-center h-full'>
-				<Loader2 className='h-10 w-10 animate-spin text-emerald-600 mb-4' />
-				<p className='text-emerald-700'>Generating quiz questions...</p>
+				<LoadingSteps currentStep={loadingStep} />
+				<p className='text-emerald-600 text-sm mt-6'>
+					Please wait while we prepare your quiz...
+				</p>
 			</div>
 		);
 	}
