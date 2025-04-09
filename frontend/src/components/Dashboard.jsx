@@ -23,12 +23,11 @@ export default function Dashboard() {
 	const {
 		transcriptionData,
 		processAudioFile,
+		processPDF,
 		clearTranscription,
 		retryTranscription,
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
-
-	console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
 
 	// Close sidebar by default on mobile
 	useEffect(() => {
@@ -129,14 +128,40 @@ export default function Dashboard() {
 					}));
 				}
 			} else if (data.type === "pdf") {
-				// Handle PDF processing results
-				setOutputData({
-					transcription: "PDF content will be displayed here...",
-					summary: "PDF summary will be displayed here...",
-					questions: [],
+				const formData = new FormData();
+				formData.append("file", data.file);
+
+				// Make the API call
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/process-pdf`,
+					{
+						method: "POST",
+						body: formData, // Send as FormData
+					}
+				);
+
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.detail || "Failed to process PDF");
+				}
+
+				const result = await response.json();
+
+				let summary = "";
+				let questions = [];
+				let transcription = "";
+				if (result.success) {
+					summary = result.summary;
+					questions = result.questions;
+					transcription = result.transcript;
+				}
+				setOutputData((prev) => ({
+					...prev,
+					summary: summary,
+					questions: questions,
+					transcription: transcription,
 					loading: false,
-					error: null,
-				});
+				}));
 			} else if (data.type === "youtube") {
 				// Handle YouTube URL
 				const youtubeResponse = await fetch(
@@ -273,9 +298,7 @@ export default function Dashboard() {
 		<div className='min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col md:flex-row'>
 			{/* Mobile Header with Menu */}
 			<div className='md:hidden flex items-center justify-between p-4 border-b border-emerald-200 bg-white/30 backdrop-blur-sm'>
-				<h1 className='text-xl font-bold text-emerald-800'>
-					AI Lecture Assistant
-				</h1>
+				<h1 className='text-xl font-bold text-emerald-800'>MentorMind</h1>
 				<button
 					onClick={() => setSidebarOpen(!sidebarOpen)}
 					className='p-2 rounded-lg bg-emerald-100 text-emerald-700'
@@ -296,11 +319,9 @@ export default function Dashboard() {
 			`}
 			>
 				<div className='hidden md:block mb-6'>
-					<h1 className='text-2xl font-bold text-emerald-800'>
-						AI Lecture Assistant
-					</h1>
+					<h1 className='text-2xl font-bold text-emerald-800'>MentorMind</h1>
 					<p className='text-emerald-600 text-sm mt-1'>
-						Transform lectures into structured notes
+						Smart Learning, Simplified
 					</p>
 				</div>
 
@@ -329,6 +350,7 @@ export default function Dashboard() {
 					onRetry={handleRetry}
 					chatMessages={chatMessages}
 					setChatMessages={setChatMessages}
+					inputType={inputType}
 				/>
 			</div>
 

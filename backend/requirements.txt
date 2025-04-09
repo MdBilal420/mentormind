@@ -11,4 +11,6 @@ youtube_transcript_api==1.0.3
 google-api-python-client==2.100.0
 requests
 deepgram-sdk
-supadata
+supadata==1.1.0
+sentence_transformers
+PyPDF2
