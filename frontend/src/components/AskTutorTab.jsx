@@ -117,6 +117,7 @@ export default function AskTutorTab({ data }) {
 	const messagesEndRef = useRef(null);
 	const chatContainerRef = useRef(null);
 	const [showScrollButton, setShowScrollButton] = useState(false);
+	const [isProcessing, setIsProcessing] = useState(false);
 
 	// Scroll to the bottom of the chat
 	const scrollToBottom = () => {
@@ -166,12 +167,10 @@ export default function AskTutorTab({ data }) {
 		if (streamingResponse) {
 			setMessages((prev) => {
 				// Check if the last message is already the same as what we're streaming
-				// This avoids duplicates when canceling
 				const lastMessage = prev[prev.length - 1];
 				if (
-					lastMessage &&
-					lastMessage.role === "assistant" &&
-					lastMessage.content === streamingResponse
+					lastMessage?.role === "assistant" &&
+					lastMessage?.content === streamingResponse
 				) {
 					return prev; // Already added, don't add again
 				}
@@ -186,7 +185,12 @@ export default function AskTutorTab({ data }) {
 
 	// Send a message to the AI tutor with streaming response
 	const handleSendMessage = async () => {
-		if (!currentMessage.trim() || isLoading || isStreaming) return;
+		// Check if already processing or no valid message
+		if (!currentMessage.trim() || isLoading || isStreaming || isProcessing)
+			return;
+
+		// Set processing flag
+		setIsProcessing(true);
 
 		const userMessage = currentMessage.trim();
 		setCurrentMessage("");
@@ -250,10 +254,20 @@ export default function AskTutorTab({ data }) {
 				if (done) {
 					// Stream is complete - only add message if we haven't already
 					if (accumulatedResponse && !messageAdded) {
-						setMessages((prev) => [
-							...prev,
-							{ role: "assistant", content: accumulatedResponse },
-						]);
+						setMessages((prev) => {
+							// Check if the last message already contains this content
+							const lastMessage = prev[prev.length - 1];
+							if (
+								lastMessage?.role === "assistant" &&
+								lastMessage?.content === accumulatedResponse
+							) {
+								return prev; // Don't add duplicate message
+							}
+							return [
+								...prev,
+								{ role: "assistant", content: accumulatedResponse },
+							];
+						});
 						setStreamingResponse("");
 						messageAdded = true;
 					}
@@ -279,10 +293,20 @@ export default function AskTutorTab({ data }) {
 							if (data.done) {
 								// Streaming completed, add the full response to messages if not already added
 								if (!messageAdded) {
-									setMessages((prev) => [
-										...prev,
-										{ role: "assistant", content: accumulatedResponse },
-									]);
+									setMessages((prev) => {
+										// Check for duplicates before adding
+										const lastMessage = prev[prev.length - 1];
+										if (
+											lastMessage?.role === "assistant" &&
+											lastMessage?.content === accumulatedResponse
+										) {
+											return prev; // Don't add duplicate message
+										}
+										return [
+											...prev,
+											{ role: "assistant", content: accumulatedResponse },
+										];
+									});
 									messageAdded = true;
 								}
 								setStreamingResponse("");
@@ -305,7 +329,7 @@ export default function AskTutorTab({ data }) {
 				if (shouldUpdateUI) {
 					// Use a debounced update strategy to avoid too frequent renders
 					const now = Date.now();
-					if (!window.lastStreamUpdate || now - window.lastStreamUpdate > 50) {
+					if (!window.lastStreamUpdate || now - window.lastStreamUpdate > 100) {
 						setStreamingResponse(accumulatedResponse);
 						window.lastStreamUpdate = now;
 					}
@@ -327,14 +351,20 @@ export default function AskTutorTab({ data }) {
 		} finally {
 			setIsLoading(false);
 			setIsStreaming(false);
+			setIsProcessing(false); // Reset processing flag
 			abortControllerRef.current = null;
 			window.lastStreamUpdate = null; // Clean up
 		}
 	};
 
-	// Handle Enter key press
+	// Modify handleKeyPress to prevent default only if we're going to process
 	const handleKeyPress = (e) => {
-		if (e.key === "Enter" && !e.shiftKey) {
+		if (
+			e.key === "Enter" &&
+			!e.shiftKey &&
+			!isProcessing &&
+			currentMessage.trim()
+		) {
 			e.preventDefault();
 			handleSendMessage();
 		}
@@ -382,7 +412,7 @@ export default function AskTutorTab({ data }) {
 						<HelpCircle className='h-5 w-5 text-blue-600' />
 					)}
 					<h3 className='text-lg font-semibold text-emerald-800'>
-						{chatMode === "socratic" ? "Socratic Tutor" : "AskGPT"}
+						{chatMode === "socratic" ? "Socratic Mentor" : "AskGPT"}
 					</h3>
 				</div>
 

@@ -298,9 +298,7 @@ export default function Dashboard() {
 		<div className='min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col md:flex-row'>
 			{/* Mobile Header with Menu */}
 			<div className='md:hidden flex items-center justify-between p-4 border-b border-emerald-200 bg-white/30 backdrop-blur-sm'>
-				<h1 className='text-xl font-bold text-emerald-800'>
-					AI Lecture Assistant
-				</h1>
+				<h1 className='text-xl font-bold text-emerald-800'>MentorMind</h1>
 				<button
 					onClick={() => setSidebarOpen(!sidebarOpen)}
 					className='p-2 rounded-lg bg-emerald-100 text-emerald-700'
@@ -321,11 +319,9 @@ export default function Dashboard() {
 			`}
 			>
 				<div className='hidden md:block mb-6'>
-					<h1 className='text-2xl font-bold text-emerald-800'>
-						AI Lecture Assistant
-					</h1>
+					<h1 className='text-2xl font-bold text-emerald-800'>MentorMind</h1>
 					<p className='text-emerald-600 text-sm mt-1'>
-						Transform lectures into structured notes
+						Smart Learning, Simplified
 					</p>
 				</div>
 

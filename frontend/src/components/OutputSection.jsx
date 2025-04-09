@@ -34,7 +34,7 @@ export default function OutputSection({
 		<div className='h-full flex flex-col'>
 			<div className='mb-4'>
 				<h2 className='text-xl md:text-2xl font-semibold text-emerald-800 mb-4'>
-					Lecture Analysis
+					Learning Suite
 				</h2>
 
 				<div className='w-full overflow-x-auto pb-2'>
@@ -56,19 +56,19 @@ export default function OutputSection({
 								value='summary'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Summary
+								Smart Notes
 							</TabsTrigger>
 							<TabsTrigger
 								value='quiz'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Test Knowledge
+								Practice Zone
 							</TabsTrigger>
 							<TabsTrigger
 								value='ask'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Ask Tutor
+								Ask MentorMind
 							</TabsTrigger>
 						</TabsList>
 					</Tabs>
@@ -86,9 +86,9 @@ export default function OutputSection({
 							{inputType !== "pdf" && (
 								<TabsTrigger value='transcription'>Transcription</TabsTrigger>
 							)}
-							<TabsTrigger value='summary'>Summary</TabsTrigger>
-							<TabsTrigger value='quiz'>Test Knowledge</TabsTrigger>
-							<TabsTrigger value='ask'>Ask Tutor</TabsTrigger>
+							<TabsTrigger value='summary'>Smart Notes</TabsTrigger>
+							<TabsTrigger value='quiz'>Practice Zone</TabsTrigger>
+							<TabsTrigger value='ask'>Ask MentorMind</TabsTrigger>
 						</TabsList>
 					</div>
 
