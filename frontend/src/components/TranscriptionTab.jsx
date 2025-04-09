@@ -2,10 +2,12 @@ import { motion } from "framer-motion";
 import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import AudioPlayer from "./AudioPlayer";
+import LoadingSteps from "./LoadingSteps";
 import TimestampedTranscription from "./TimestampedTranscription";
 
 export default function TranscriptionTab({ data, onRetry }) {
 	const [currentTime, setCurrentTime] = useState(0);
+	const [loadingStep, setLoadingStep] = useState(0);
 
 	const handleTimestampClick = (time) => {
 		setCurrentTime(time);
@@ -72,18 +74,12 @@ export default function TranscriptionTab({ data, onRetry }) {
 	// Loading state
 	if (data.loading) {
 		return (
-			<motion.div
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5 }}
-				className='bg-white/50 rounded-lg p-6 h-full flex flex-col items-center justify-center'
-			>
-				<Loader2 className='h-10 w-10 animate-spin text-emerald-600 mb-4' />
-				<p className='text-emerald-700'>Processing your audio...</p>
-				<p className='text-xs text-emerald-500 mt-2'>
-					This may take a minute depending on the file size
+			<div className='flex flex-col items-center justify-center h-full'>
+				<LoadingSteps currentStep={loadingStep} />
+				<p className='text-emerald-600 text-sm mt-6'>
+					Converting content to text...
 				</p>
-			</motion.div>
+			</div>
 		);
 	}
 

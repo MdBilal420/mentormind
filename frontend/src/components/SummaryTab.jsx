@@ -7,14 +7,15 @@ import {
 	Download,
 	FileDown,
 	FileText,
-	Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import LoadingSteps from "./LoadingSteps";
 import { toast } from "./ui/toast";
 
 export default function SummaryTab({ data }) {
 	const [copied, setCopied] = useState(false);
 	const [downloading, setDownloading] = useState(false);
+	const [loadingStep, setLoadingStep] = useState(0);
 
 	const copyToClipboard = () => {
 		if (data.summary) {
@@ -169,11 +170,21 @@ export default function SummaryTab({ data }) {
 		}
 	};
 
+	// change loading step every 5 seconds and stay on 3 after 30 seconds
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setLoadingStep((prev) => (prev + 1) % 3);
+		}, 5000);
+		return () => clearInterval(interval);
+	}, []);
+
 	if (data.loading) {
 		return (
 			<div className='flex flex-col items-center justify-center h-full'>
-				<Loader2 className='h-10 w-10 animate-spin text-emerald-600 mb-4' />
-				<p className='text-emerald-700'>Generating summary...</p>
+				<LoadingSteps currentStep={loadingStep} />
+				<p className='text-emerald-600 text-sm mt-6'>
+					Generating comprehensive summary...
+				</p>
 			</div>
 		);
 	}
