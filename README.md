@@ -7,7 +7,7 @@ It efficiently converts audio recordings and YouTube videos into comprehensive l
 - **YouTube Processing**: Generate transcripts and educational content from YouTube videos
 - **AI-Generated Summaries**: Create concise, bullet-point summaries of lectures
 - **Interactive Quizzes**: Test knowledge with automatically generated multiple-choice questions
-- **Ask Tutor**: Get answers to questions about lecture content using Consversational AI Agent
+- **Conversational AI Tutor (Ask Tutor)**: Get answers to questions about lecture content using Consversational AI Agent
 
 ## 🛠️ Technologies Used
 
