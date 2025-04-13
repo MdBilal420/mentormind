@@ -1,4 +1,4 @@
-EduBot is an AI-powered assistant that transcribes lectures, generates structured notes, and creates quizzes to improve the online learning experience. 
+MentorMind is an AI-powered assistant that transcribes lectures, generates structured notes, and creates quizzes to improve the online learning experience. 
 It efficiently converts audio recordings and YouTube videos into comprehensive lecture notes and formulates quizzes to assess students' understanding.
 
 ## 🌟 Features
@@ -35,8 +35,8 @@ It efficiently converts audio recordings and YouTube videos into comprehensive l
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/edubot.git
-   cd edubot
+   git clone https://github.com/yourusername/MentorMind.git
+   cd MentorMind
    ```
 
 2. Set up the Python virtual environment
@@ -109,7 +109,7 @@ It efficiently converts audio recordings and YouTube videos into comprehensive l
 ## 📂 Project Structure
 
 ```
-edubot/
+MentorMind/
 ├── backend/
 │   ├── app.py              # FastAPI application
 │   ├── requirements.txt    # Python dependencies
