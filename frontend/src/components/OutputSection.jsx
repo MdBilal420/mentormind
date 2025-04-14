@@ -1,8 +1,9 @@
-import { BookOpen, Brain, FileText, MessageCircle } from "lucide-react";
+import { BookOpen, Brain, FileText, MessageCircle, Mic } from "lucide-react";
 import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import QuizTab from "./QuizTab";
 import SummaryTab from "./SummaryTab";
+import TalkToTutorMode from "./TalkToTutorMode";
 import TranscriptionTab from "./TranscriptionTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -75,6 +76,13 @@ export default function OutputSection({
 								<MessageCircle className='w-4 h-4 mr-2' />
 								Ask MentorMind
 							</TabsTrigger>
+							<TabsTrigger
+								value='talk'
+								className='flex-1 text-xs md:text-sm whitespace-nowrap'
+							>
+								<Mic className='w-4 h-4 mr-2' />
+								Talk to Tutor
+							</TabsTrigger>
 						</TabsList>
 					</Tabs>
 				</div>
@@ -106,6 +114,10 @@ export default function OutputSection({
 								<MessageCircle className='w-4 h-4 mr-2' />
 								Ask MentorMind
 							</TabsTrigger>
+							<TabsTrigger value='talk'>
+								<Mic className='w-4 h-4 mr-2' />
+								Talk to Tutor
+							</TabsTrigger>
 						</TabsList>
 					</div>
 
@@ -130,6 +142,10 @@ export default function OutputSection({
 								messages={chatMessages}
 								setMessages={setChatMessages}
 							/>
+						</TabsContent>
+
+						<TabsContent value='talk' className='h-full'>
+							<TalkToTutorMode data={data} />
 						</TabsContent>
 					</div>
 				</Tabs>
