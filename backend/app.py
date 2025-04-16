@@ -1052,6 +1052,8 @@ async def process_pdf_endpoint(file: UploadFile = File(...)):
         return {
             "success": False,
             "summary": "",
+            "transcript": "",  # Add empty transcript
+            "questions": [],   # Add empty questions list
             "error": str(e)
         }
 

@@ -4,14 +4,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Construction, Mic, MicOff } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-export default function TalkToTutorMode({ data }) {
+export default function TalkToTutorMode({ data, topic }) {
 	const [error, setError] = useState(null);
 	const client = new ElevenLabsClient({
 		apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY,
 	});
 
-	console.log(data, "data");
-
+	// console.log(data, "data");
+	// console.log(topic, "topic");
 	// Initialize conversation hook
 	const conversation = useConversation({
 		onConnect: () => console.log("Connected to voice agent"),
@@ -43,6 +43,10 @@ export default function TalkToTutorMode({ data }) {
 	// Start conversation handler
 	const startConversation = useCallback(async () => {
 		try {
+			if (!topic) {
+				setError("Please select a topic first to start the conversation");
+				return;
+			}
 			// Request microphone permission
 			await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -54,12 +58,15 @@ export default function TalkToTutorMode({ data }) {
 				//signedUrl, // Use signed URL for private agents
 				// Or use agentId for public agents:
 				agentId: "JZmfbugV533aCUAhkFha",
+				dynamicVariables: {
+					topic: topic,
+				},
 			});
 		} catch (error) {
 			console.error("Failed to start conversation:", error);
 			setError("Failed to start conversation: " + error.message);
 		}
-	}, [conversation]);
+	}, [conversation, topic]);
 
 	// Stop conversation handler
 	const stopConversation = useCallback(async () => {
@@ -74,7 +81,7 @@ export default function TalkToTutorMode({ data }) {
 	useEffect(() => {
 		const a = async () => {
 			const response = await client.conversationalAi.getKnowledgeBaseList();
-			console.log(response);
+			console.log(response.documents);
 		};
 		a();
 	}, []);
@@ -114,6 +121,12 @@ export default function TalkToTutorMode({ data }) {
 							{conversation.isSpeaking ? "speaking" : "listening"}
 						</span>
 					</p>
+					{topic && (
+						<p className='text-sm text-teal-700 mt-2'>
+							Current Topic:{" "}
+							<span className='font-medium text-teal-900'>{topic}</span>
+						</p>
+					)}
 				</div>
 
 				{/* Conversation Area */}
@@ -129,7 +142,36 @@ export default function TalkToTutorMode({ data }) {
 					</div>
 
 					<AnimatePresence mode='wait'>
-						{conversation.status === "disconnected" ? (
+						{!topic ? (
+							<motion.div
+								className='h-full flex flex-col items-center justify-center relative z-10'
+								initial={{ opacity: 0, scale: 0.9 }}
+								animate={{ opacity: 1, scale: 1 }}
+								exit={{ opacity: 0, scale: 0.9 }}
+							>
+								<motion.div
+									className='w-24 h-24 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center shadow-lg'
+									animate={{
+										scale: [1, 1.05, 1],
+										boxShadow: [
+											"0 0 25px rgba(156, 163, 175, 0.3)",
+											"0 0 35px rgba(156, 163, 175, 0.5)",
+											"0 0 25px rgba(156, 163, 175, 0.3)",
+										],
+									}}
+									transition={{ duration: 2, repeat: Infinity }}
+								>
+									<Construction className='w-10 h-10 text-white' />
+								</motion.div>
+								<h3 className='text-lg font-medium text-gray-900 mt-6 mb-2'>
+									Select a Topic First
+								</h3>
+								<p className='text-sm text-gray-600 text-center max-w-md'>
+									Please select a topic before starting the conversation with
+									the AI tutor
+								</p>
+							</motion.div>
+						) : conversation.status === "disconnected" ? (
 							<motion.div
 								className='h-full flex flex-col items-center justify-center relative z-10'
 								initial={{ opacity: 0, scale: 0.9 }}
@@ -223,16 +265,18 @@ export default function TalkToTutorMode({ data }) {
 				<div className='flex justify-center gap-4'>
 					<motion.button
 						onClick={startConversation}
-						disabled={conversation.status === "connected"}
+						disabled={conversation.status === "connected" || !topic}
 						className={`flex items-center gap-2 px-8 py-4 rounded-xl font-medium ${
-							conversation.status === "connected"
+							conversation.status === "connected" || !topic
 								? "bg-gray-100 text-gray-400 cursor-not-allowed"
 								: "bg-gradient-to-r from-teal-400 to-cyan-500 text-white shadow-lg hover:shadow-xl shadow-teal-500/25"
 						}`}
 						whileHover={{
-							scale: conversation.status !== "connected" ? 1.05 : 1,
+							scale: conversation.status !== "connected" && topic ? 1.05 : 1,
 						}}
-						whileTap={{ scale: conversation.status !== "connected" ? 0.95 : 1 }}
+						whileTap={{
+							scale: conversation.status !== "connected" && topic ? 0.95 : 1,
+						}}
 					>
 						<Mic className='w-5 h-5' />
 						Start Conversation

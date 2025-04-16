@@ -29,6 +29,8 @@ export default function Dashboard() {
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
 
+	const [topic, setTopic] = useState("");
+
 	// Close sidebar by default on mobile
 	useEffect(() => {
 		const handleResize = () => {
@@ -330,6 +332,7 @@ export default function Dashboard() {
 					inputType={inputType}
 					setInputType={setInputType}
 					error={outputData.error}
+					setTopic={setTopic}
 				/>
 			</div>
 
@@ -351,6 +354,7 @@ export default function Dashboard() {
 					chatMessages={chatMessages}
 					setChatMessages={setChatMessages}
 					inputType={inputType}
+					topic={topic}
 				/>
 			</div>
 

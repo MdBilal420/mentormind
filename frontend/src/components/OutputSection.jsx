@@ -24,6 +24,7 @@ export default function OutputSection({
 	chatMessages,
 	setChatMessages,
 	inputType,
+	topic,
 }) {
 	// If we're switching away from transcription tab and input is PDF, go to summary
 	useEffect(() => {
@@ -89,6 +90,9 @@ export default function OutputSection({
 			</div>
 
 			<div className='flex-1 bg-white/30 backdrop-blur-lg rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-3 md:p-6 border border-white/40'>
+				<h4 className='text-lg md:text-xl font-semibold text-emerald-800 mb-4'>
+					{topic.replace(/\.pdf|\.mp3$/, "")}
+				</h4>
 				<Tabs
 					value={activeTab}
 					onValueChange={setActiveTab}
@@ -145,7 +149,10 @@ export default function OutputSection({
 						</TabsContent>
 
 						<TabsContent value='talk' className='h-full'>
-							<TalkToTutorMode data={data} />
+							<TalkToTutorMode
+								data={data}
+								topic={topic.replace(/\.pdf|\.mp3$/, "")}
+							/>
 						</TabsContent>
 					</div>
 				</Tabs>
