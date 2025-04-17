@@ -15,6 +15,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import TalkToTutorMode from "./TalkToTutorMode";
 
 // Create a memoized version of the markdown component
 const MemoizedMarkdown = memo(({ children }) => {
@@ -112,11 +113,12 @@ export default function AskTutorTab({ data }) {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [error, setError] = useState(null);
 	const [streamingResponse, setStreamingResponse] = useState("");
-	const [chatMode, setChatMode] = useState("socratic"); // "socratic" or "direct"
+	const [chatMode, setChatMode] = useState("direct"); // "socratic", "direct", or "talk"
 	const abortControllerRef = useRef(null);
 	const messagesEndRef = useRef(null);
 	const chatContainerRef = useRef(null);
 	const [showScrollButton, setShowScrollButton] = useState(false);
+	const [isProcessing, setIsProcessing] = useState(false);
 
 	// Scroll to the bottom of the chat
 	const scrollToBottom = () => {
@@ -166,12 +168,10 @@ export default function AskTutorTab({ data }) {
 		if (streamingResponse) {
 			setMessages((prev) => {
 				// Check if the last message is already the same as what we're streaming
-				// This avoids duplicates when canceling
 				const lastMessage = prev[prev.length - 1];
 				if (
-					lastMessage &&
-					lastMessage.role === "assistant" &&
-					lastMessage.content === streamingResponse
+					lastMessage?.role === "assistant" &&
+					lastMessage?.content === streamingResponse
 				) {
 					return prev; // Already added, don't add again
 				}
@@ -186,7 +186,12 @@ export default function AskTutorTab({ data }) {
 
 	// Send a message to the AI tutor with streaming response
 	const handleSendMessage = async () => {
-		if (!currentMessage.trim() || isLoading || isStreaming) return;
+		// Check if already processing or no valid message
+		if (!currentMessage.trim() || isLoading || isStreaming || isProcessing)
+			return;
+
+		// Set processing flag
+		setIsProcessing(true);
 
 		const userMessage = currentMessage.trim();
 		setCurrentMessage("");
@@ -215,8 +220,10 @@ export default function AskTutorTab({ data }) {
 			// Choose endpoint based on the chat mode
 			const endpoint =
 				chatMode === "socratic"
-					? "http://localhost:8000/api/chat-stream"
-					: "http://localhost:8000/api/chat-direct-stream";
+					? `${process.env.NEXT_PUBLIC_API_URL}/api/chat-stream`
+					: chatMode === "direct"
+					? `${process.env.NEXT_PUBLIC_API_URL}/api/chat-direct-stream`
+					: `${process.env.NEXT_PUBLIC_API_URL}/api/chat-talk-stream`;
 
 			// Send request to backend with streaming
 			const response = await fetch(endpoint, {
@@ -250,10 +257,20 @@ export default function AskTutorTab({ data }) {
 				if (done) {
 					// Stream is complete - only add message if we haven't already
 					if (accumulatedResponse && !messageAdded) {
-						setMessages((prev) => [
-							...prev,
-							{ role: "assistant", content: accumulatedResponse },
-						]);
+						setMessages((prev) => {
+							// Check if the last message already contains this content
+							const lastMessage = prev[prev.length - 1];
+							if (
+								lastMessage?.role === "assistant" &&
+								lastMessage?.content === accumulatedResponse
+							) {
+								return prev; // Don't add duplicate message
+							}
+							return [
+								...prev,
+								{ role: "assistant", content: accumulatedResponse },
+							];
+						});
 						setStreamingResponse("");
 						messageAdded = true;
 					}
@@ -279,10 +296,20 @@ export default function AskTutorTab({ data }) {
 							if (data.done) {
 								// Streaming completed, add the full response to messages if not already added
 								if (!messageAdded) {
-									setMessages((prev) => [
-										...prev,
-										{ role: "assistant", content: accumulatedResponse },
-									]);
+									setMessages((prev) => {
+										// Check for duplicates before adding
+										const lastMessage = prev[prev.length - 1];
+										if (
+											lastMessage?.role === "assistant" &&
+											lastMessage?.content === accumulatedResponse
+										) {
+											return prev; // Don't add duplicate message
+										}
+										return [
+											...prev,
+											{ role: "assistant", content: accumulatedResponse },
+										];
+									});
 									messageAdded = true;
 								}
 								setStreamingResponse("");
@@ -305,7 +332,7 @@ export default function AskTutorTab({ data }) {
 				if (shouldUpdateUI) {
 					// Use a debounced update strategy to avoid too frequent renders
 					const now = Date.now();
-					if (!window.lastStreamUpdate || now - window.lastStreamUpdate > 50) {
+					if (!window.lastStreamUpdate || now - window.lastStreamUpdate > 100) {
 						setStreamingResponse(accumulatedResponse);
 						window.lastStreamUpdate = now;
 					}
@@ -327,14 +354,20 @@ export default function AskTutorTab({ data }) {
 		} finally {
 			setIsLoading(false);
 			setIsStreaming(false);
+			setIsProcessing(false); // Reset processing flag
 			abortControllerRef.current = null;
 			window.lastStreamUpdate = null; // Clean up
 		}
 	};
 
-	// Handle Enter key press
+	// Modify handleKeyPress to prevent default only if we're going to process
 	const handleKeyPress = (e) => {
-		if (e.key === "Enter" && !e.shiftKey) {
+		if (
+			e.key === "Enter" &&
+			!e.shiftKey &&
+			!isProcessing &&
+			currentMessage.trim()
+		) {
 			e.preventDefault();
 			handleSendMessage();
 		}
@@ -378,17 +411,37 @@ export default function AskTutorTab({ data }) {
 				<div className='flex items-center gap-2'>
 					{chatMode === "socratic" ? (
 						<Lightbulb className='h-5 w-5 text-emerald-600' />
-					) : (
+					) : chatMode === "direct" ? (
 						<HelpCircle className='h-5 w-5 text-blue-600' />
+					) : (
+						<MessageSquare className='h-5 w-5 text-yellow-600' />
 					)}
 					<h3 className='text-lg font-semibold text-emerald-800'>
-						{chatMode === "socratic" ? "Socratic Tutor" : "AskGPT"}
+						{chatMode === "socratic"
+							? "Socratic Mentor"
+							: chatMode === "direct"
+							? "AskGPT"
+							: "Talk to Tutor"}
 					</h3>
 				</div>
 
 				<div className='flex items-center gap-2'>
 					{/* Chat Mode Toggle */}
 					<div className='flex bg-white/70 p-1 rounded-lg border border-emerald-100'>
+						<button
+							onClick={() => {
+								if (isStreaming) cancelStream();
+								setChatMode("direct");
+								if (messages.length > 0) handleNewConversation();
+							}}
+							className={`px-3 py-1 text-xs rounded-md transition-colors ${
+								chatMode === "direct"
+									? "bg-blue-100 text-blue-800"
+									: "text-gray-600 hover:bg-gray-100"
+							}`}
+						>
+							AskGPT
+						</button>
 						<button
 							onClick={() => {
 								if (isStreaming) cancelStream();
@@ -406,16 +459,16 @@ export default function AskTutorTab({ data }) {
 						<button
 							onClick={() => {
 								if (isStreaming) cancelStream();
-								setChatMode("direct");
+								setChatMode("talk");
 								if (messages.length > 0) handleNewConversation();
 							}}
 							className={`px-3 py-1 text-xs rounded-md transition-colors ${
-								chatMode === "direct"
-									? "bg-blue-100 text-blue-800"
+								chatMode === "talk"
+									? "bg-yellow-100 text-yellow-800"
 									: "text-gray-600 hover:bg-gray-100"
 							}`}
 						>
-							AskGPT
+							Talk to Tutor
 						</button>
 					</div>
 
@@ -430,32 +483,48 @@ export default function AskTutorTab({ data }) {
 				</div>
 			</div>
 
-			{messages.length === 0 && !streamingResponse ? (
+			{chatMode === "talk" ? (
+				<TalkToTutorMode />
+			) : messages.length === 0 && !streamingResponse ? (
 				<div className='flex-1 flex flex-col items-center justify-center text-center px-4'>
 					<div
 						className={`rounded-full p-3 mb-3 ${
-							chatMode === "socratic" ? "bg-emerald-50" : "bg-blue-50"
+							chatMode === "socratic"
+								? "bg-emerald-50"
+								: chatMode === "direct"
+								? "bg-blue-50"
+								: "bg-yellow-50"
 						}`}
 					>
 						{chatMode === "socratic" ? (
 							<Lightbulb className='h-6 w-6 text-emerald-500' />
-						) : (
+						) : chatMode === "direct" ? (
 							<HelpCircle className='h-6 w-6 text-blue-500' />
+						) : (
+							<MessageSquare className='h-6 w-6 text-yellow-500' />
 						)}
 					</div>
 					<h4
 						className={`font-medium mb-2 ${
-							chatMode === "socratic" ? "text-emerald-800" : "text-blue-800"
+							chatMode === "socratic"
+								? "text-emerald-800"
+								: chatMode === "direct"
+								? "text-blue-800"
+								: "text-yellow-800"
 						}`}
 					>
 						{chatMode === "socratic"
 							? "Ask about the lecture content"
-							: "Get direct answers to your questions"}
+							: chatMode === "direct"
+							? "Get direct answers to your questions"
+							: "Talk to Tutor Mode - Coming Soon!"}
 					</h4>
 					<p className='text-sm text-emerald-600 max-w-md'>
 						{chatMode === "socratic"
 							? "I'm a Socratic tutor, which means I'll help guide your understanding through thoughtful questions rather than just providing answers."
-							: "I'm here to provide direct answers to your questions based on the content of the lecture. Just ask away!"}
+							: chatMode === "direct"
+							? "I'm here to provide direct answers to your questions based on the content of the lecture. Just ask away!"
+							: "We're working on an exciting new feature that will allow you to have voice conversations with your AI tutor. Stay tuned!"}
 					</p>
 					<div className='mt-6 space-y-2 w-full max-w-md'>
 						<button
@@ -463,6 +532,8 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "What are the main points of this lecture?"
+										: chatMode === "direct"
+										? "Summarize the key points of this lecture."
 										: "Summarize the key points of this lecture."
 								)
 							}
@@ -470,6 +541,8 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "What are the main points of this lecture?"
+								: chatMode === "direct"
+								? "Summarize the key points of this lecture."
 								: "Summarize the key points of this lecture."}
 						</button>
 						<button
@@ -477,6 +550,8 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "Can you help me understand the concept of [topic]?"
+										: chatMode === "direct"
+										? "Explain the concept of [topic] from the lecture."
 										: "Explain the concept of [topic] from the lecture."
 								)
 							}
@@ -484,6 +559,8 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "Can you help me understand the concept of [topic]?"
+								: chatMode === "direct"
+								? "Explain the concept of [topic] from the lecture."
 								: "Explain the concept of [topic] from the lecture."}
 						</button>
 						<button
@@ -491,6 +568,8 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "Why is this topic important?"
+										: chatMode === "direct"
+										? "What are the practical applications of this information?"
 										: "What are the practical applications of this information?"
 								)
 							}
@@ -498,6 +577,8 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "Why is this topic important?"
+								: chatMode === "direct"
+								? "What are the practical applications of this information?"
 								: "What are the practical applications of this information?"}
 						</button>
 					</div>
@@ -528,10 +609,14 @@ export default function AskTutorTab({ data }) {
 									className={`flex gap-3 max-w-[80%] ${
 										message.role === "user"
 											? "bg-emerald-100 text-emerald-800"
+											: message.role === "system"
+											? "bg-gray-100 text-gray-600"
 											: "bg-white text-gray-800"
 									} p-3 rounded-lg ${
 										message.role === "user"
 											? "rounded-tr-none"
+											: message.role === "system"
+											? "rounded-tl-none"
 											: "rounded-tl-none"
 									} shadow-sm`}
 								>
@@ -539,6 +624,8 @@ export default function AskTutorTab({ data }) {
 										className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center ${
 											message.role === "user"
 												? "bg-emerald-200"
+												: message.role === "system"
+												? "bg-gray-200"
 												: chatMode === "socratic"
 												? "bg-emerald-200"
 												: "bg-blue-200"
@@ -546,12 +633,16 @@ export default function AskTutorTab({ data }) {
 									>
 										{message.role === "user" ? (
 											<User className='h-3 w-3 text-emerald-700' />
+										) : message.role === "system" ? (
+											<Bot className='h-3 w-3 text-gray-600' />
 										) : (
 											<Bot
 												className={`h-3 w-3 ${
 													chatMode === "socratic"
 														? "text-emerald-700"
-														: "text-blue-700"
+														: chatMode === "direct"
+														? "text-blue-700"
+														: "text-yellow-700"
 												}`}
 											/>
 										)}
@@ -570,14 +661,20 @@ export default function AskTutorTab({ data }) {
 							<div className='flex gap-3 max-w-[80%] bg-white p-3 rounded-lg rounded-tl-none shadow-sm'>
 								<div
 									className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center ${
-										chatMode === "socratic" ? "bg-emerald-200" : "bg-blue-200"
+										chatMode === "socratic"
+											? "bg-emerald-200"
+											: chatMode === "direct"
+											? "bg-blue-200"
+											: "bg-yellow-200"
 									}`}
 								>
 									<Bot
 										className={`h-3 w-3 ${
 											chatMode === "socratic"
 												? "text-emerald-700"
-												: "text-blue-700"
+												: chatMode === "direct"
+												? "text-blue-700"
+												: "text-yellow-700"
 										}`}
 									/>
 								</div>
@@ -603,52 +700,56 @@ export default function AskTutorTab({ data }) {
 			)}
 
 			{/* Chat input */}
-			<div className='mt-4 flex items-end gap-2'>
-				<textarea
-					className={`flex-1 p-3 rounded-lg border focus:ring outline-none resize-none bg-white/80 text-sm ${
-						chatMode === "socratic"
-							? "border-emerald-200 focus:ring-emerald-300 focus:border-emerald-500"
-							: "border-blue-200 focus:ring-blue-300 focus:border-blue-500"
-					}`}
-					rows={2}
-					placeholder={
-						chatMode === "socratic"
-							? "Ask a question about the lecture (I'll help you think through it)..."
-							: "Ask a question about the lecture (I'll provide a direct answer)..."
-					}
-					value={currentMessage}
-					onChange={(e) => setCurrentMessage(e.target.value)}
-					onKeyDown={handleKeyPress}
-					disabled={isLoading || isStreaming}
-				/>
-				{isStreaming ? (
-					<button
-						onClick={cancelStream}
-						className='px-4 py-3 rounded-lg transition-colors flex-shrink-0 bg-red-500 hover:bg-red-600 text-white'
-						title='Stop generating'
-					>
-						<StopCircle className='h-5 w-5' />
-					</button>
-				) : (
-					<button
-						onClick={handleSendMessage}
-						disabled={!currentMessage.trim() || isLoading}
-						className={`px-4 py-3 rounded-lg transition-colors flex-shrink-0 ${
-							!currentMessage.trim() || isLoading
-								? "bg-gray-200 text-gray-400 cursor-not-allowed"
-								: chatMode === "socratic"
-								? "bg-emerald-600 text-white hover:bg-emerald-700"
-								: "bg-blue-600 text-white hover:bg-blue-700"
+			{chatMode !== "talk" && (
+				<div className='mt-4 flex items-end gap-2'>
+					<textarea
+						className={`flex-1 p-3 rounded-lg border focus:ring outline-none resize-none bg-white/80 text-sm ${
+							chatMode === "socratic"
+								? "border-emerald-200 focus:ring-emerald-300 focus:border-emerald-500"
+								: chatMode === "direct"
+								? "border-blue-200 focus:ring-blue-300 focus:border-blue-500"
+								: "border-yellow-200 focus:ring-yellow-300 focus:border-yellow-500"
 						}`}
-					>
-						{isLoading ? (
-							<Loader2 className='h-5 w-5 animate-spin' />
-						) : (
-							<Send className='h-5 w-5' />
-						)}
-					</button>
-				)}
-			</div>
+						rows={2}
+						placeholder={
+							chatMode === "socratic"
+								? "Ask a question about the lecture (I'll help you think through it)..."
+								: "Ask a question about the lecture (I'll provide a direct answer)..."
+						}
+						value={currentMessage}
+						onChange={(e) => setCurrentMessage(e.target.value)}
+						onKeyDown={handleKeyPress}
+						disabled={isLoading || isStreaming}
+					/>
+					{isStreaming ? (
+						<button
+							onClick={cancelStream}
+							className='px-4 py-3 rounded-lg transition-colors flex-shrink-0 bg-red-500 hover:bg-red-600 text-white'
+							title='Stop generating'
+						>
+							<StopCircle className='h-5 w-5' />
+						</button>
+					) : (
+						<button
+							onClick={handleSendMessage}
+							disabled={!currentMessage.trim() || isLoading}
+							className={`px-4 py-3 rounded-lg transition-colors flex-shrink-0 ${
+								!currentMessage.trim() || isLoading
+									? "bg-gray-200 text-gray-400 cursor-not-allowed"
+									: chatMode === "socratic"
+									? "bg-emerald-600 text-white hover:bg-emerald-700"
+									: "bg-blue-600 text-white hover:bg-blue-700"
+							}`}
+						>
+							{isLoading ? (
+								<Loader2 className='h-5 w-5 animate-spin' />
+							) : (
+								<Send className='h-5 w-5' />
+							)}
+						</button>
+					)}
+				</div>
+			)}
 		</motion.div>
 	);
 }

@@ -7,14 +7,15 @@ import {
 	Download,
 	FileDown,
 	FileText,
-	Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import LoadingSteps from "./LoadingSteps";
 import { toast } from "./ui/toast";
 
 export default function SummaryTab({ data }) {
 	const [copied, setCopied] = useState(false);
 	const [downloading, setDownloading] = useState(false);
+	const [loadingStep, setLoadingStep] = useState(0);
 
 	const copyToClipboard = () => {
 		if (data.summary) {
@@ -30,43 +31,62 @@ export default function SummaryTab({ data }) {
 
 		// Split by new lines and filter out empty lines
 		const lines = summary.split("\n").filter((line) => line.trim());
-
-		// Group lines into sections (optional)
 		const sections = [];
 		let currentSection = { title: "Key Points", items: [] };
 
 		lines.forEach((line) => {
 			const trimmedLine = line.trim();
 
-			// Check if line is a bullet point
-			if (
-				trimmedLine.startsWith("•") ||
-				trimmedLine.startsWith("-") ||
-				trimmedLine.startsWith("*")
-			) {
-				// Remove the bullet character and trim
-				const content = trimmedLine.substring(1).trim();
-				currentSection.items.push(content);
-			} else if (trimmedLine.endsWith(":") && trimmedLine.length > 2) {
-				// This might be a section header
+			// Check if line is a markdown header (starts with #)
+			if (trimmedLine.startsWith("#")) {
+				// If we have items in the current section, save it
+				if (currentSection.items.length > 0) {
+					sections.push(currentSection);
+				}
+				// Create new section with header text (remove # and trim)
+				const headerText = trimmedLine.replace(/^#+\s*/, "");
+				currentSection = { title: headerText, items: [] };
+			}
+			// Check if line is a markdown bullet point
+			else if (trimmedLine.match(/^[-*•]\s+/)) {
+				// Remove bullet character and trim
+				const content = trimmedLine.replace(/^[-*•]\s+/, "");
+				if (content) {
+					currentSection.items.push(content);
+				}
+			}
+			// Check if line is a numbered point
+			else if (trimmedLine.match(/^\d+\.\s+/)) {
+				// Remove number and dot, then trim
+				const content = trimmedLine.replace(/^\d+\.\s+/, "");
+				if (content) {
+					currentSection.items.push(content);
+				}
+			}
+			// Check if line is a section title (ends with :)
+			else if (trimmedLine.endsWith(":")) {
 				if (currentSection.items.length > 0) {
 					sections.push(currentSection);
 				}
 				currentSection = { title: trimmedLine.slice(0, -1), items: [] };
-			} else {
-				// Regular line, add as a bullet point
+			}
+			// If it's not empty, treat as regular content
+			else if (trimmedLine) {
 				currentSection.items.push(trimmedLine);
 			}
 		});
 
-		// Add the last section
+		// Add the last section if it has items
 		if (currentSection.items.length > 0) {
 			sections.push(currentSection);
 		}
 
-		return sections.length > 0
-			? sections
-			: [{ title: "Summary", items: lines }];
+		// If no sections were created, create a default one
+		if (sections.length === 0) {
+			return [{ title: "Summary", items: lines.filter((line) => line.trim()) }];
+		}
+
+		return sections;
 	};
 
 	// Download as text file
@@ -150,11 +170,21 @@ export default function SummaryTab({ data }) {
 		}
 	};
 
+	// change loading step every 5 seconds and stay on 3 after 30 seconds
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setLoadingStep((prev) => (prev + 1) % 3);
+		}, 5000);
+		return () => clearInterval(interval);
+	}, []);
+
 	if (data.loading) {
 		return (
 			<div className='flex flex-col items-center justify-center h-full'>
-				<Loader2 className='h-10 w-10 animate-spin text-emerald-600 mb-4' />
-				<p className='text-emerald-700'>Generating summary...</p>
+				<LoadingSteps currentStep={loadingStep} />
+				<p className='text-emerald-600 text-sm mt-6'>
+					Generating comprehensive summary...
+				</p>
 			</div>
 		);
 	}

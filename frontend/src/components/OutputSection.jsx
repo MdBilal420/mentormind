@@ -1,3 +1,5 @@
+import { BookOpen, Brain, FileText, MessageCircle } from "lucide-react";
+import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import QuizTab from "./QuizTab";
 import SummaryTab from "./SummaryTab";
@@ -13,61 +15,6 @@ const formatTime = (seconds) => {
 		.padStart(2, "0")}`;
 };
 
-// Component for displaying transcription with timestamps
-const TimestampedTranscription = ({ words }) => {
-	if (!words || words.length === 0) {
-		return (
-			<p className='text-emerald-600 italic'>No timestamped data available</p>
-		);
-	}
-
-	// Group words into sentences
-	const sentences = [];
-	let currentSentence = { words: [], startTime: words[0].start };
-
-	words.forEach((word) => {
-		currentSentence.words.push(word);
-		// If word ends with punctuation, start a new sentence
-		if (word.word.match(/[.!?]$/)) {
-			sentences.push({
-				...currentSentence,
-				endTime: word.end,
-				text: currentSentence.words.map((w) => w.word).join(" "),
-			});
-			currentSentence = { words: [], startTime: word.end };
-		}
-	});
-
-	// Add the last sentence if it's not empty and doesn't end with punctuation
-	if (currentSentence.words.length > 0) {
-		sentences.push({
-			...currentSentence,
-			endTime: currentSentence.words[currentSentence.words.length - 1].end,
-			text: currentSentence.words.map((w) => w.word).join(" "),
-		});
-	}
-
-	return (
-		<div className='space-y-4'>
-			{sentences.map((sentence, idx) => (
-				<div
-					key={idx}
-					className='flex group hover:bg-emerald-50/50 rounded-lg p-2 transition-colors'
-				>
-					<div className='flex-shrink-0 w-16 text-emerald-500 font-mono text-xs pt-1'>
-						{formatTime(sentence.startTime)}
-					</div>
-					<div className='flex-grow'>
-						<p className='text-sm md:text-base text-emerald-900'>
-							{sentence.text}
-						</p>
-					</div>
-				</div>
-			))}
-		</div>
-	);
-};
-
 export default function OutputSection({
 	data,
 	activeTab,
@@ -75,44 +22,58 @@ export default function OutputSection({
 	onRetry,
 	chatMessages,
 	setChatMessages,
+	inputType,
 }) {
+	// If we're switching away from transcription tab and input is PDF, go to summary
+	useEffect(() => {
+		if (inputType === "pdf" && activeTab === "transcription") {
+			setActiveTab("summary");
+		}
+	}, [inputType, activeTab, setActiveTab]);
+
 	return (
 		<div className='h-full flex flex-col'>
 			<div className='mb-4'>
 				<h2 className='text-xl md:text-2xl font-semibold text-emerald-800 mb-4'>
-					Lecture Analysis
+					Learning Suite
 				</h2>
 
 				<div className='w-full overflow-x-auto pb-2'>
 					<Tabs
+						defaultValue={activeTab}
 						value={activeTab}
 						onValueChange={setActiveTab}
-						className='w-full'
 					>
-						<TabsList className='w-full flex md:grid md:grid-cols-4'>
-							<TabsTrigger
-								value='transcription'
-								className='flex-1 text-xs md:text-sm whitespace-nowrap'
-							>
-								Transcription
-							</TabsTrigger>
+						<TabsList className='w-full'>
+							{inputType !== "pdf" && (
+								<TabsTrigger
+									value='transcription'
+									className='flex-1 text-xs md:text-sm whitespace-nowrap'
+								>
+									<FileText className='w-4 h-4 mr-2' />
+									Transcription
+								</TabsTrigger>
+							)}
 							<TabsTrigger
 								value='summary'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Summary
+								<BookOpen className='w-4 h-4 mr-2' />
+								Smart Notes
 							</TabsTrigger>
 							<TabsTrigger
 								value='quiz'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Test Knowledge
+								<Brain className='w-4 h-4 mr-2' />
+								Practice Zone
 							</TabsTrigger>
 							<TabsTrigger
 								value='ask'
 								className='flex-1 text-xs md:text-sm whitespace-nowrap'
 							>
-								Ask Tutor
+								<MessageCircle className='w-4 h-4 mr-2' />
+								Ask MentorMind
 							</TabsTrigger>
 						</TabsList>
 					</Tabs>
@@ -127,17 +88,33 @@ export default function OutputSection({
 				>
 					<div className='sr-only'>
 						<TabsList>
-							<TabsTrigger value='transcription'>Transcription</TabsTrigger>
-							<TabsTrigger value='summary'>Summary</TabsTrigger>
-							<TabsTrigger value='quiz'>Test Knowledge</TabsTrigger>
-							<TabsTrigger value='ask'>Ask Tutor</TabsTrigger>
+							{inputType !== "pdf" && (
+								<TabsTrigger value='transcription'>
+									<FileText className='w-4 h-4 mr-2' />
+									Transcription
+								</TabsTrigger>
+							)}
+							<TabsTrigger value='summary'>
+								<BookOpen className='w-4 h-4 mr-2' />
+								Smart Notes
+							</TabsTrigger>
+							<TabsTrigger value='quiz'>
+								<Brain className='w-4 h-4 mr-2' />
+								Practice Zone
+							</TabsTrigger>
+							<TabsTrigger value='ask'>
+								<MessageCircle className='w-4 h-4 mr-2' />
+								Ask MentorMind
+							</TabsTrigger>
 						</TabsList>
 					</div>
 
 					<div className='flex-1'>
-						<TabsContent value='transcription' className='h-full'>
-							<TranscriptionTab data={data} onRetry={onRetry} />
-						</TabsContent>
+						{inputType !== "pdf" && (
+							<TabsContent value='transcription' className='h-full'>
+								<TranscriptionTab data={data} onRetry={onRetry} />
+							</TabsContent>
+						)}
 
 						<TabsContent value='summary' className='h-full'>
 							<SummaryTab data={data} />

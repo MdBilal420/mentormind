@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-//const API_URL = "http://localhost:8000";
-const API_URL = "https://bilal-420-edubot-hf.hf.space";
-
 const extractVideoId = (url) => {
 	const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
 	const match = url.match(regExp);
@@ -64,7 +61,7 @@ const useChat = () => {
 		setInput("");
 
 		try {
-			const response = await fetch(`${API_URL}/chat`, {
+			const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -93,7 +90,7 @@ const useChat = () => {
 		// 	try {
 		// 		const videoId = extractVideoId(selectedResource);
 		// 		const response = await fetch(
-		// 			`${API_URL}/fetch-transcript-video/${videoId}/${input}`
+		// 			`${process.env.NEXT_PUBLIC_API_URL}/fetch-transcript-video/${videoId}/${input}`
 		// 		);
 
 		// 		const data = await response.json();
