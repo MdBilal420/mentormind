@@ -1,14 +1,11 @@
 import { useConversation } from "@11labs/react";
-import { ElevenLabsClient } from "elevenlabs";
+
 import { AnimatePresence, motion } from "framer-motion";
 import { Construction, Mic, MicOff } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export default function TalkToTutorMode({ data, topic }) {
 	const [error, setError] = useState(null);
-	const client = new ElevenLabsClient({
-		apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY,
-	});
 
 	// console.log(data, "data");
 	// console.log(topic, "topic");
@@ -40,6 +37,8 @@ export default function TalkToTutorMode({ data, topic }) {
 		}
 	};
 
+	console.log(topic, "topic", data);
+
 	// Start conversation handler
 	const startConversation = useCallback(async () => {
 		try {
@@ -60,6 +59,7 @@ export default function TalkToTutorMode({ data, topic }) {
 				agentId: "JZmfbugV533aCUAhkFha",
 				dynamicVariables: {
 					topic: topic,
+					transcription: data.transcription,
 				},
 			});
 		} catch (error) {
@@ -77,14 +77,6 @@ export default function TalkToTutorMode({ data, topic }) {
 			setError("Failed to stop conversation: " + error.message);
 		}
 	}, [conversation]);
-
-	useEffect(() => {
-		const a = async () => {
-			const response = await client.conversationalAi.getKnowledgeBaseList();
-			console.log(response.documents);
-		};
-		a();
-	}, []);
 
 	if (error) {
 		return (
@@ -142,7 +134,7 @@ export default function TalkToTutorMode({ data, topic }) {
 					</div>
 
 					<AnimatePresence mode='wait'>
-						{!topic ? (
+						{!topic || !data.transcription ? (
 							<motion.div
 								className='h-full flex flex-col items-center justify-center relative z-10'
 								initial={{ opacity: 0, scale: 0.9 }}
@@ -265,17 +257,33 @@ export default function TalkToTutorMode({ data, topic }) {
 				<div className='flex justify-center gap-4'>
 					<motion.button
 						onClick={startConversation}
-						disabled={conversation.status === "connected" || !topic}
+						disabled={
+							conversation.status === "connected" ||
+							!topic ||
+							!data.transcription
+						}
 						className={`flex items-center gap-2 px-8 py-4 rounded-xl font-medium ${
-							conversation.status === "connected" || !topic
+							conversation.status === "connected" ||
+							!topic ||
+							!data.transcription
 								? "bg-gray-100 text-gray-400 cursor-not-allowed"
 								: "bg-gradient-to-r from-teal-400 to-cyan-500 text-white shadow-lg hover:shadow-xl shadow-teal-500/25"
 						}`}
 						whileHover={{
-							scale: conversation.status !== "connected" && topic ? 1.05 : 1,
+							scale:
+								conversation.status !== "connected" &&
+								topic &&
+								data.transcription
+									? 1.05
+									: 1,
 						}}
 						whileTap={{
-							scale: conversation.status !== "connected" && topic ? 0.95 : 1,
+							scale:
+								conversation.status !== "connected" &&
+								topic &&
+								data.transcription
+									? 0.95
+									: 1,
 						}}
 					>
 						<Mic className='w-5 h-5' />

@@ -1,5 +1,6 @@
 "use client";
 
+//import { ElevenLabsClient } from "elevenlabs";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
@@ -8,6 +9,10 @@ import InputSidebar from "./InputSidebar";
 import OutputSection from "./OutputSection";
 
 export default function Dashboard() {
+	// const client = new ElevenLabsClient({
+	// 	apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY,
+	// });
+
 	const [activeTab, setActiveTab] = useState("transcription");
 	const [outputData, setOutputData] = useState({
 		transcription: "",
@@ -20,6 +25,7 @@ export default function Dashboard() {
 	});
 	const [inputType, setInputType] = useState("audio");
 	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [knowledgeBase, setKnowledgeBase] = useState([]);
 	const {
 		transcriptionData,
 		processAudioFile,
@@ -270,31 +276,19 @@ export default function Dashboard() {
 		}
 	};
 
-	// Helper function to convert timestamp format (HH:MM:SS) to seconds
-	const parseTimeToSeconds = (timestamp) => {
-		if (!timestamp) return 0;
+	// useEffect(() => {
+	// 	const a = async () => {
+	// 		const response = await client.conversationalAi.getKnowledgeBaseList();
+	// 		const documents = response.documents.map((document) => ({
+	// 			id: document.id,
+	// 			name: document.name.replace(".pdf", "").replace(".mp3", ""),
+	// 		}));
+	// 		setKnowledgeBase(documents);
+	// 	};
+	// 	a();
+	// }, []);
 
-		const parts = timestamp.split(":");
-		let seconds = 0;
-
-		// Handle hours, minutes, seconds
-		if (parts.length === 3) {
-			seconds =
-				parseInt(parts[0]) * 3600 +
-				parseInt(parts[1]) * 60 +
-				parseInt(parts[2]);
-		}
-		// Handle minutes, seconds
-		else if (parts.length === 2) {
-			seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-		}
-		// Handle just seconds
-		else if (parts.length === 1) {
-			seconds = parseInt(parts[0]);
-		}
-
-		return seconds;
-	};
+	// console.log(knowledgeBase);
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col md:flex-row'>
@@ -333,6 +327,7 @@ export default function Dashboard() {
 					setInputType={setInputType}
 					error={outputData.error}
 					setTopic={setTopic}
+					setOutputData={setOutputData}
 				/>
 			</div>
 

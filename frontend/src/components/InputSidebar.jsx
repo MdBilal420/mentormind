@@ -62,6 +62,7 @@ export default function InputSidebar({
 	setInputType,
 	error = null,
 	setTopic,
+	setOutputData,
 }) {
 	const [audioFile, setAudioFile] = useState(null);
 	const [pdfFile, setPdfFile] = useState(null);
@@ -173,6 +174,20 @@ export default function InputSidebar({
 	const handleFileUpload = (event, type) => {
 		// Clear any previous errors
 		setLocalError(null);
+		setSelectedSampleId(null);
+		setSelectedPDFSampleId(null);
+		setSelectedYouTubeSampleId(null);
+		setYoutubeUrl("");
+		setTopic("");
+		setOutputData({
+			transcription: "",
+			sentences: [],
+			summary: "",
+			questions: [],
+			audioUrl: "",
+			loading: false,
+			error: null,
+		});
 
 		const file = event.target.files[0];
 		if (file) {
