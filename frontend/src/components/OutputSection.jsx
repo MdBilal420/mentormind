@@ -1,8 +1,9 @@
-import { BookOpen, Brain, FileText, MessageCircle } from "lucide-react";
+import { BookOpen, Brain, FileText, MessageCircle, Mic } from "lucide-react";
 import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import QuizTab from "./QuizTab";
 import SummaryTab from "./SummaryTab";
+import TalkToTutorMode from "./TalkToTutorMode";
 import TranscriptionTab from "./TranscriptionTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -23,6 +24,7 @@ export default function OutputSection({
 	chatMessages,
 	setChatMessages,
 	inputType,
+	topic,
 }) {
 	// If we're switching away from transcription tab and input is PDF, go to summary
 	useEffect(() => {
@@ -75,12 +77,22 @@ export default function OutputSection({
 								<MessageCircle className='w-4 h-4 mr-2' />
 								Ask MentorMind
 							</TabsTrigger>
+							<TabsTrigger
+								value='talk'
+								className='flex-1 text-xs md:text-sm whitespace-nowrap'
+							>
+								<Mic className='w-4 h-4 mr-2' />
+								Talk to Tutor
+							</TabsTrigger>
 						</TabsList>
 					</Tabs>
 				</div>
 			</div>
 
 			<div className='flex-1 bg-white/30 backdrop-blur-lg rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-3 md:p-6 border border-white/40'>
+				<h4 className='text-lg md:text-xl font-semibold text-emerald-800 mb-4'>
+					{topic.replace(/\.pdf|\.mp3$/, "")}
+				</h4>
 				<Tabs
 					value={activeTab}
 					onValueChange={setActiveTab}
@@ -106,6 +118,10 @@ export default function OutputSection({
 								<MessageCircle className='w-4 h-4 mr-2' />
 								Ask MentorMind
 							</TabsTrigger>
+							<TabsTrigger value='talk'>
+								<Mic className='w-4 h-4 mr-2' />
+								Talk to Tutor
+							</TabsTrigger>
 						</TabsList>
 					</div>
 
@@ -129,6 +145,13 @@ export default function OutputSection({
 								data={data}
 								messages={chatMessages}
 								setMessages={setChatMessages}
+							/>
+						</TabsContent>
+
+						<TabsContent value='talk' className='h-full'>
+							<TalkToTutorMode
+								data={data}
+								topic={topic.replace(/\.pdf|\.mp3$/, "")}
 							/>
 						</TabsContent>
 					</div>

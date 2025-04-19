@@ -61,6 +61,8 @@ export default function InputSidebar({
 	inputType,
 	setInputType,
 	error = null,
+	setTopic,
+	setOutputData,
 }) {
 	const [audioFile, setAudioFile] = useState(null);
 	const [pdfFile, setPdfFile] = useState(null);
@@ -101,12 +103,14 @@ export default function InputSidebar({
 			}
 
 			setAudioFile(file);
+			setTopic(file.name);
 			console.log("Sample file loaded:", file); // Debug log
 		} catch (error) {
 			console.error("Error loading sample file:", error);
 			setLocalError("Failed to load sample file: " + error.message);
 			setSelectedSampleId(null);
 			setAudioFile(null);
+			setTopic("");
 		} finally {
 			setLoadingSample(false);
 		}
@@ -134,11 +138,13 @@ export default function InputSidebar({
 			}
 
 			setPdfFile(file);
+			setTopic(file.name);
 		} catch (error) {
 			console.error("Error loading sample PDF:", error);
 			setLocalError("Failed to load sample PDF: " + error.message);
 			setSelectedPDFSampleId(null);
 			setPdfFile(null);
+			setTopic("");
 		} finally {
 			setLoadingSample(false);
 		}
@@ -162,11 +168,26 @@ export default function InputSidebar({
 		if (videoId) {
 			sample.thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 		}
+		setTopic(sample.name);
 	};
 
 	const handleFileUpload = (event, type) => {
 		// Clear any previous errors
 		setLocalError(null);
+		setSelectedSampleId(null);
+		setSelectedPDFSampleId(null);
+		setSelectedYouTubeSampleId(null);
+		setYoutubeUrl("");
+		setTopic("");
+		setOutputData({
+			transcription: "",
+			sentences: [],
+			summary: "",
+			questions: [],
+			audioUrl: "",
+			loading: false,
+			error: null,
+		});
 
 		const file = event.target.files[0];
 		if (file) {
@@ -189,8 +210,10 @@ export default function InputSidebar({
 
 			if (type === "audio") {
 				setAudioFile(file);
+				setTopic(file.name);
 			} else if (type === "pdf") {
 				setPdfFile(file);
+				setTopic(file.name);
 			}
 		}
 	};

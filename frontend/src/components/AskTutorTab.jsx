@@ -15,7 +15,6 @@ import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import TalkToTutorMode from "./TalkToTutorMode";
 
 // Create a memoized version of the markdown component
 const MemoizedMarkdown = memo(({ children }) => {
@@ -113,7 +112,7 @@ export default function AskTutorTab({ data }) {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [error, setError] = useState(null);
 	const [streamingResponse, setStreamingResponse] = useState("");
-	const [chatMode, setChatMode] = useState("direct"); // "socratic", "direct", or "talk"
+	const [chatMode, setChatMode] = useState("direct"); // "socratic" or "direct"
 	const abortControllerRef = useRef(null);
 	const messagesEndRef = useRef(null);
 	const chatContainerRef = useRef(null);
@@ -411,22 +410,16 @@ export default function AskTutorTab({ data }) {
 				<div className='flex items-center gap-2'>
 					{chatMode === "socratic" ? (
 						<Lightbulb className='h-5 w-5 text-emerald-600' />
-					) : chatMode === "direct" ? (
-						<HelpCircle className='h-5 w-5 text-blue-600' />
 					) : (
-						<MessageSquare className='h-5 w-5 text-yellow-600' />
+						<HelpCircle className='h-5 w-5 text-blue-600' />
 					)}
 					<h3 className='text-lg font-semibold text-emerald-800'>
-						{chatMode === "socratic"
-							? "Socratic Mentor"
-							: chatMode === "direct"
-							? "AskGPT"
-							: "Talk to Tutor"}
+						{chatMode === "socratic" ? "Socratic Mentor" : "AskGPT"}
 					</h3>
 				</div>
 
 				<div className='flex items-center gap-2'>
-					{/* Chat Mode Toggle */}
+					{/* Chat Mode Toggle - Only show Socratic and Direct */}
 					<div className='flex bg-white/70 p-1 rounded-lg border border-emerald-100'>
 						<button
 							onClick={() => {
@@ -456,20 +449,6 @@ export default function AskTutorTab({ data }) {
 						>
 							Socratic
 						</button>
-						<button
-							onClick={() => {
-								if (isStreaming) cancelStream();
-								setChatMode("talk");
-								if (messages.length > 0) handleNewConversation();
-							}}
-							className={`px-3 py-1 text-xs rounded-md transition-colors ${
-								chatMode === "talk"
-									? "bg-yellow-100 text-yellow-800"
-									: "text-gray-600 hover:bg-gray-100"
-							}`}
-						>
-							Talk to Tutor
-						</button>
 					</div>
 
 					<button
@@ -483,48 +462,32 @@ export default function AskTutorTab({ data }) {
 				</div>
 			</div>
 
-			{chatMode === "talk" ? (
-				<TalkToTutorMode />
-			) : messages.length === 0 && !streamingResponse ? (
+			{messages.length === 0 && !streamingResponse ? (
 				<div className='flex-1 flex flex-col items-center justify-center text-center px-4'>
 					<div
 						className={`rounded-full p-3 mb-3 ${
-							chatMode === "socratic"
-								? "bg-emerald-50"
-								: chatMode === "direct"
-								? "bg-blue-50"
-								: "bg-yellow-50"
+							chatMode === "socratic" ? "bg-emerald-50" : "bg-blue-50"
 						}`}
 					>
 						{chatMode === "socratic" ? (
 							<Lightbulb className='h-6 w-6 text-emerald-500' />
-						) : chatMode === "direct" ? (
-							<HelpCircle className='h-6 w-6 text-blue-500' />
 						) : (
-							<MessageSquare className='h-6 w-6 text-yellow-500' />
+							<HelpCircle className='h-6 w-6 text-blue-500' />
 						)}
 					</div>
 					<h4
 						className={`font-medium mb-2 ${
-							chatMode === "socratic"
-								? "text-emerald-800"
-								: chatMode === "direct"
-								? "text-blue-800"
-								: "text-yellow-800"
+							chatMode === "socratic" ? "text-emerald-800" : "text-blue-800"
 						}`}
 					>
 						{chatMode === "socratic"
 							? "Ask about the lecture content"
-							: chatMode === "direct"
-							? "Get direct answers to your questions"
-							: "Talk to Tutor Mode - Coming Soon!"}
+							: "Get direct answers to your questions"}
 					</h4>
 					<p className='text-sm text-emerald-600 max-w-md'>
 						{chatMode === "socratic"
 							? "I'm a Socratic tutor, which means I'll help guide your understanding through thoughtful questions rather than just providing answers."
-							: chatMode === "direct"
-							? "I'm here to provide direct answers to your questions based on the content of the lecture. Just ask away!"
-							: "We're working on an exciting new feature that will allow you to have voice conversations with your AI tutor. Stay tuned!"}
+							: "I'm here to provide direct answers to your questions based on the content of the lecture. Just ask away!"}
 					</p>
 					<div className='mt-6 space-y-2 w-full max-w-md'>
 						<button
@@ -532,8 +495,6 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "What are the main points of this lecture?"
-										: chatMode === "direct"
-										? "Summarize the key points of this lecture."
 										: "Summarize the key points of this lecture."
 								)
 							}
@@ -541,8 +502,6 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "What are the main points of this lecture?"
-								: chatMode === "direct"
-								? "Summarize the key points of this lecture."
 								: "Summarize the key points of this lecture."}
 						</button>
 						<button
@@ -550,8 +509,6 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "Can you help me understand the concept of [topic]?"
-										: chatMode === "direct"
-										? "Explain the concept of [topic] from the lecture."
 										: "Explain the concept of [topic] from the lecture."
 								)
 							}
@@ -559,8 +516,6 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "Can you help me understand the concept of [topic]?"
-								: chatMode === "direct"
-								? "Explain the concept of [topic] from the lecture."
 								: "Explain the concept of [topic] from the lecture."}
 						</button>
 						<button
@@ -568,8 +523,6 @@ export default function AskTutorTab({ data }) {
 								setCurrentMessage(
 									chatMode === "socratic"
 										? "Why is this topic important?"
-										: chatMode === "direct"
-										? "What are the practical applications of this information?"
 										: "What are the practical applications of this information?"
 								)
 							}
@@ -577,8 +530,6 @@ export default function AskTutorTab({ data }) {
 						>
 							{chatMode === "socratic"
 								? "Why is this topic important?"
-								: chatMode === "direct"
-								? "What are the practical applications of this information?"
 								: "What are the practical applications of this information?"}
 						</button>
 					</div>
@@ -700,56 +651,52 @@ export default function AskTutorTab({ data }) {
 			)}
 
 			{/* Chat input */}
-			{chatMode !== "talk" && (
-				<div className='mt-4 flex items-end gap-2'>
-					<textarea
-						className={`flex-1 p-3 rounded-lg border focus:ring outline-none resize-none bg-white/80 text-sm ${
-							chatMode === "socratic"
-								? "border-emerald-200 focus:ring-emerald-300 focus:border-emerald-500"
-								: chatMode === "direct"
-								? "border-blue-200 focus:ring-blue-300 focus:border-blue-500"
-								: "border-yellow-200 focus:ring-yellow-300 focus:border-yellow-500"
+			<div className='mt-4 flex items-end gap-2'>
+				<textarea
+					className={`flex-1 p-3 rounded-lg border focus:ring outline-none resize-none bg-white/80 text-sm ${
+						chatMode === "socratic"
+							? "border-emerald-200 focus:ring-emerald-300 focus:border-emerald-500"
+							: "border-blue-200 focus:ring-blue-300 focus:border-blue-500"
+					}`}
+					rows={2}
+					placeholder={
+						chatMode === "socratic"
+							? "Ask a question about the lecture (I'll help you think through it)..."
+							: "Ask a question about the lecture (I'll provide a direct answer)..."
+					}
+					value={currentMessage}
+					onChange={(e) => setCurrentMessage(e.target.value)}
+					onKeyDown={handleKeyPress}
+					disabled={isLoading || isStreaming}
+				/>
+				{isStreaming ? (
+					<button
+						onClick={cancelStream}
+						className='px-4 py-3 rounded-lg transition-colors flex-shrink-0 bg-red-500 hover:bg-red-600 text-white'
+						title='Stop generating'
+					>
+						<StopCircle className='h-5 w-5' />
+					</button>
+				) : (
+					<button
+						onClick={handleSendMessage}
+						disabled={!currentMessage.trim() || isLoading}
+						className={`px-4 py-3 rounded-lg transition-colors flex-shrink-0 ${
+							!currentMessage.trim() || isLoading
+								? "bg-gray-200 text-gray-400 cursor-not-allowed"
+								: chatMode === "socratic"
+								? "bg-emerald-600 text-white hover:bg-emerald-700"
+								: "bg-blue-600 text-white hover:bg-blue-700"
 						}`}
-						rows={2}
-						placeholder={
-							chatMode === "socratic"
-								? "Ask a question about the lecture (I'll help you think through it)..."
-								: "Ask a question about the lecture (I'll provide a direct answer)..."
-						}
-						value={currentMessage}
-						onChange={(e) => setCurrentMessage(e.target.value)}
-						onKeyDown={handleKeyPress}
-						disabled={isLoading || isStreaming}
-					/>
-					{isStreaming ? (
-						<button
-							onClick={cancelStream}
-							className='px-4 py-3 rounded-lg transition-colors flex-shrink-0 bg-red-500 hover:bg-red-600 text-white'
-							title='Stop generating'
-						>
-							<StopCircle className='h-5 w-5' />
-						</button>
-					) : (
-						<button
-							onClick={handleSendMessage}
-							disabled={!currentMessage.trim() || isLoading}
-							className={`px-4 py-3 rounded-lg transition-colors flex-shrink-0 ${
-								!currentMessage.trim() || isLoading
-									? "bg-gray-200 text-gray-400 cursor-not-allowed"
-									: chatMode === "socratic"
-									? "bg-emerald-600 text-white hover:bg-emerald-700"
-									: "bg-blue-600 text-white hover:bg-blue-700"
-							}`}
-						>
-							{isLoading ? (
-								<Loader2 className='h-5 w-5 animate-spin' />
-							) : (
-								<Send className='h-5 w-5' />
-							)}
-						</button>
-					)}
-				</div>
-			)}
+					>
+						{isLoading ? (
+							<Loader2 className='h-5 w-5 animate-spin' />
+						) : (
+							<Send className='h-5 w-5' />
+						)}
+					</button>
+				)}
+			</div>
 		</motion.div>
 	);
 }

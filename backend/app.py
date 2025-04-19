@@ -1052,6 +1052,8 @@ async def process_pdf_endpoint(file: UploadFile = File(...)):
         return {
             "success": False,
             "summary": "",
+            "transcript": "",  # Add empty transcript
+            "questions": [],   # Add empty questions list
             "error": str(e)
         }
 
@@ -1134,6 +1136,57 @@ def search_relevant_chunks(query_embedding: List[float],
     
     top_indices = np.argsort(similarities)[-top_k:][::-1]
     return [chunks[i] for i in top_indices]
+
+# Add environment variable check
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+if not ELEVENLABS_API_KEY:
+    print("Warning: ELEVENLABS_API_KEY environment variable not set")
+
+class SignedUrlResponse(BaseModel):
+    signedUrl: str
+
+@app.get("/api/get-signed-url", response_model=SignedUrlResponse)
+async def get_signed_url():
+    """Get a signed URL for ElevenLabs voice agent conversation"""
+    try:
+        if not ELEVENLABS_API_KEY:
+            raise HTTPException(
+                status_code=500, 
+                detail="ELEVENLABS_API_KEY not configured"
+            )
+
+        # Get the agent ID from environment variable
+        agent_id = os.getenv("ELEVENLABS_AGENT_ID")
+        if not agent_id:
+            raise HTTPException(
+                status_code=500,
+                detail="ELEVENLABS_AGENT_ID not configured"
+            )
+
+        # Make request to ElevenLabs API
+        response = await requests.get(
+            f"https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id={agent_id}",
+            headers={
+                "xi-api-key": ELEVENLABS_API_KEY
+            }
+        )
+
+        if not response.ok:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Failed to get signed URL: {response.text}"
+            )
+
+        data = response.json()
+        return {"signedUrl": data["signed_url"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting signed URL: {str(e)}"
+        )
 
 
 
