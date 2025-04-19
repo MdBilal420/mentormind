@@ -254,7 +254,7 @@ export default function TalkToTutorMode({ data, topic }) {
 				</motion.div>
 
 				{/* Control Buttons */}
-				<div className='flex justify-center gap-4'>
+				<div className='flex flex-row justify-center gap-4'>
 					<motion.button
 						onClick={startConversation}
 						disabled={
@@ -262,7 +262,7 @@ export default function TalkToTutorMode({ data, topic }) {
 							!topic ||
 							!data.transcription
 						}
-						className={`flex items-center gap-2 px-8 py-4 rounded-xl font-medium ${
+						className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-xl font-medium w-full sm:w-auto ${
 							conversation.status === "connected" ||
 							!topic ||
 							!data.transcription
@@ -287,13 +287,13 @@ export default function TalkToTutorMode({ data, topic }) {
 						}}
 					>
 						<Mic className='w-5 h-5' />
-						Start Conversation
+						<span className='text-sm'>Start Conversation</span>
 					</motion.button>
 
 					<motion.button
 						onClick={stopConversation}
 						disabled={conversation.status !== "connected"}
-						className={`flex items-center gap-2 px-8 py-4 rounded-xl font-medium ${
+						className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium w-full ${
 							conversation.status !== "connected"
 								? "bg-gray-100 text-gray-400 cursor-not-allowed"
 								: "bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-lg hover:shadow-xl shadow-rose-500/25"
@@ -304,7 +304,7 @@ export default function TalkToTutorMode({ data, topic }) {
 						whileTap={{ scale: conversation.status === "connected" ? 0.95 : 1 }}
 					>
 						<MicOff className='w-5 h-5' />
-						Stop Conversation
+						<span className='text-sm'>Stop Conversation</span>
 					</motion.button>
 				</div>
 			</div>
