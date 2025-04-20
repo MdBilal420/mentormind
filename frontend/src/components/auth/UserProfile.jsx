@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
 const UserProfile = () => {
-	const { user, signOut, updatePassword } = useAuth();
+	const { user, signOut, updatePassword, isTestAccount } = useAuth();
 	const router = useRouter();
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
@@ -85,73 +85,75 @@ const UserProfile = () => {
 					</div>
 				</div>
 
-				<div className='mb-6'>
-					<h3 className='text-lg font-medium mb-2 text-emerald-700'>
-						Change Password
-					</h3>
+				{!isTestAccount && (
+					<div className='mb-6'>
+						<h3 className='text-lg font-medium mb-2 text-emerald-700'>
+							Change Password
+						</h3>
 
-					{error && (
-						<div
-							className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-4'
-							role='alert'
-						>
-							<span className='block sm:inline'>{error}</span>
-						</div>
-					)}
-
-					{message && (
-						<div
-							className='bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded-xl relative mb-4'
-							role='alert'
-						>
-							<span className='block sm:inline'>{message}</span>
-						</div>
-					)}
-
-					<form onSubmit={handlePasswordUpdate} className='space-y-4'>
-						<div>
-							<label
-								htmlFor='new-password'
-								className='block text-sm font-medium text-emerald-700 mb-1'
+						{error && (
+							<div
+								className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-4'
+								role='alert'
 							>
-								New Password
-							</label>
-							<input
-								id='new-password'
-								type='password'
-								value={newPassword}
-								onChange={(e) => setNewPassword(e.target.value)}
-								className='w-full px-3 py-2.5 text-emerald-900 bg-white/30 backdrop-blur-lg rounded-xl shadow-lg ring-1 ring-inset ring-white/40 focus:ring-2 focus:ring-inset focus:ring-emerald-600 placeholder:text-emerald-400'
-								required
-							/>
-						</div>
+								<span className='block sm:inline'>{error}</span>
+							</div>
+						)}
 
-						<div>
-							<label
-								htmlFor='confirm-password'
-								className='block text-sm font-medium text-emerald-700 mb-1'
+						{message && (
+							<div
+								className='bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded-xl relative mb-4'
+								role='alert'
 							>
-								Confirm New Password
-							</label>
-							<input
-								id='confirm-password'
-								type='password'
-								value={confirmPassword}
-								onChange={(e) => setConfirmPassword(e.target.value)}
-								className='w-full px-3 py-2.5 text-emerald-900 bg-white/30 backdrop-blur-lg rounded-xl shadow-lg ring-1 ring-inset ring-white/40 focus:ring-2 focus:ring-inset focus:ring-emerald-600 placeholder:text-emerald-400'
-								required
-							/>
-						</div>
+								<span className='block sm:inline'>{message}</span>
+							</div>
+						)}
 
-						<button
-							type='submit'
-							disabled={loading}
-							className='w-full flex justify-center py-3 px-4 rounded-xl shadow-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 disabled:opacity-50 transition-colors'
-						>
-							{loading ? "Updating..." : "Update Password"}
-						</button>
-					</form>
-				</div>
+						<form onSubmit={handlePasswordUpdate} className='space-y-4'>
+							<div>
+								<label
+									htmlFor='new-password'
+									className='block text-sm font-medium text-emerald-700 mb-1'
+								>
+									New Password
+								</label>
+								<input
+									id='new-password'
+									type='password'
+									value={newPassword}
+									onChange={(e) => setNewPassword(e.target.value)}
+									className='w-full px-3 py-2.5 text-emerald-900 bg-white/30 backdrop-blur-lg rounded-xl shadow-lg ring-1 ring-inset ring-white/40 focus:ring-2 focus:ring-inset focus:ring-emerald-600 placeholder:text-emerald-400'
+									required
+								/>
+							</div>
+
+							<div>
+								<label
+									htmlFor='confirm-password'
+									className='block text-sm font-medium text-emerald-700 mb-1'
+								>
+									Confirm New Password
+								</label>
+								<input
+									id='confirm-password'
+									type='password'
+									value={confirmPassword}
+									onChange={(e) => setConfirmPassword(e.target.value)}
+									className='w-full px-3 py-2.5 text-emerald-900 bg-white/30 backdrop-blur-lg rounded-xl shadow-lg ring-1 ring-inset ring-white/40 focus:ring-2 focus:ring-inset focus:ring-emerald-600 placeholder:text-emerald-400'
+									required
+								/>
+							</div>
+
+							<button
+								type='submit'
+								disabled={loading}
+								className='w-full flex justify-center py-3 px-4 rounded-xl shadow-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 disabled:opacity-50 transition-colors'
+							>
+								{loading ? "Updating..." : "Update Password"}
+							</button>
+						</form>
+					</div>
+				)}
 
 				<div>
 					<button

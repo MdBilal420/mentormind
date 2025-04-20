@@ -9,8 +9,13 @@ load_dotenv()
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
-# Create Supabase client
-supabase = create_client(supabase_url, supabase_key)
+# Create Supabase client only if URL and key are available
+supabase = None
+if supabase_url and supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        print(f"Error initializing Supabase client: {e}")
 
 def get_supabase_client():
     """

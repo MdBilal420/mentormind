@@ -69,6 +69,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     
     # Verify user exists in Supabase
     try:
+        if not supabase:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service is not available"
+            )
         user = supabase.auth.get_user(token)
         if user is None:
             raise credentials_exception
@@ -80,6 +85,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @router.post("/signup", response_model=dict)
 async def signup(user: UserCreate):
     try:
+        if not supabase:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service is not available"
+            )
         response = supabase.auth.sign_up({
             "email": user.email,
             "password": user.password
@@ -94,6 +104,11 @@ async def signup(user: UserCreate):
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
+        if not supabase:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service is not available"
+            )
         # Authenticate with Supabase
         response = supabase.auth.sign_in_with_password({
             "email": form_data.username,
@@ -121,6 +136,11 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
 @router.post("/logout")
 async def logout(current_user: dict = Depends(get_current_user)):
     try:
+        if not supabase:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service is not available"
+            )
         supabase.auth.sign_out()
         return {"message": "Successfully logged out"}
     except Exception as e:
