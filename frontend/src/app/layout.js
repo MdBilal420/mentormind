@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import Navigation from "../components/Navigation";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }) {
 					<Navigation />
 					<main className='min-h-screen'>{children}</main>
 				</AuthProvider>
+				<Analytics />
 			</body>
 		</html>
 	);
