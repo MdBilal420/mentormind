@@ -1,7 +1,7 @@
 "use client";
 
 //import { ElevenLabsClient } from "elevenlabs";
-import { Menu, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { useTranscription } from "../hooks/useTranscription";
@@ -34,6 +34,7 @@ export default function Dashboard() {
 		retryTranscription,
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
+	const [showUploadIndicator, setShowUploadIndicator] = useState(false);
 
 	const [topic, setTopic] = useState("");
 
@@ -42,8 +43,11 @@ export default function Dashboard() {
 		const handleResize = () => {
 			if (window.innerWidth < 768) {
 				setSidebarOpen(false);
+				// Show upload indicator after a short delay on mobile
+				setTimeout(() => setShowUploadIndicator(true), 1000);
 			} else {
 				setSidebarOpen(true);
+				setShowUploadIndicator(false);
 			}
 		};
 
@@ -54,6 +58,17 @@ export default function Dashboard() {
 		window.addEventListener("resize", handleResize);
 		return () => window.removeEventListener("resize", handleResize);
 	}, []);
+
+	// Show upload indicator when sidebar is closed on mobile
+	useEffect(() => {
+		if (!sidebarOpen && window.innerWidth < 768) {
+			// Show indicator after a short delay when sidebar is closed
+			const timer = setTimeout(() => setShowUploadIndicator(true), 500);
+			return () => clearTimeout(timer);
+		} else {
+			setShowUploadIndicator(false);
+		}
+	}, [sidebarOpen]);
 
 	// When transcription data changes, update output data
 	useEffect(() => {
@@ -292,17 +307,6 @@ export default function Dashboard() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col md:flex-row'>
-			{/* Mobile Header with Menu */}
-			<div className='md:hidden flex items-center justify-between p-4 border-b border-emerald-200 bg-white/30 backdrop-blur-sm'>
-				<h1 className='text-xl font-bold text-emerald-800'>MentorMind</h1>
-				<button
-					onClick={() => setSidebarOpen(!sidebarOpen)}
-					className='p-2 rounded-lg bg-emerald-100 text-emerald-700'
-				>
-					{sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-				</button>
-			</div>
-
 			{/* Sidebar for Inputs */}
 			<div
 				className={`
@@ -314,13 +318,6 @@ export default function Dashboard() {
 				w-3/4 sm:w-64
 			`}
 			>
-				<div className='hidden md:block mb-6'>
-					<h1 className='text-2xl font-bold text-emerald-800'>MentorMind</h1>
-					<p className='text-emerald-600 text-sm mt-1'>
-						Smart Learning, Simplified
-					</p>
-				</div>
-
 				<InputSidebar
 					onProcessContent={handleProcessContent}
 					inputType={inputType}
@@ -337,6 +334,18 @@ export default function Dashboard() {
 					className='md:hidden fixed inset-0 bg-black bg-opacity-50 z-10'
 					onClick={() => setSidebarOpen(false)}
 				></div>
+			)}
+
+			{/* Upload Indicator for Mobile */}
+			{!sidebarOpen && showUploadIndicator && (
+				<div className='md:hidden fixed bottom-6 right-3 z-30 animate-bounce'>
+					<button
+						onClick={() => setSidebarOpen(true)}
+						className='bg-emerald-600 text-white p-3 rounded-full shadow-lg'
+					>
+						<Upload size={20} />
+					</button>
+				</div>
 			)}
 
 			{/* Main Content for Output */}

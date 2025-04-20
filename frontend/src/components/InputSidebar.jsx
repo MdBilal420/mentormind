@@ -1,5 +1,14 @@
-import { AlertCircle, FileText, Loader2, Upload, Youtube } from "lucide-react";
+import {
+	AlertCircle,
+	FileText,
+	Loader2,
+	LogIn,
+	Upload,
+	Youtube,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import SampleFiles from "./SampleFiles";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -75,6 +84,10 @@ export default function InputSidebar({
 	const [loadingSample, setLoadingSample] = useState(false);
 	const [selectedPDFSampleId, setSelectedPDFSampleId] = useState(null);
 	const [selectedYouTubeSampleId, setSelectedYouTubeSampleId] = useState(null);
+
+	// Get auth context
+	const { user, isTestAccount } = useAuth();
+	const router = useRouter();
 
 	const handleSampleSelect = async (sample) => {
 		try {
@@ -172,6 +185,19 @@ export default function InputSidebar({
 	};
 
 	const handleFileUpload = (event, type) => {
+		// Check if user is signed in and not a test account
+		if (!user) {
+			setLocalError("Please sign in to upload content");
+			return;
+		}
+
+		if (isTestAccount) {
+			setLocalError(
+				"Test accounts can only access sample files. Please sign in with your email to upload content."
+			);
+			return;
+		}
+
 		// Clear any previous errors
 		setLocalError(null);
 		setSelectedSampleId(null);
@@ -219,6 +245,12 @@ export default function InputSidebar({
 	};
 
 	const handleSubmit = async () => {
+		// Check if user is signed in and not a test account
+		if (!user) {
+			setLocalError("Please sign in to process content");
+			return;
+		}
+
 		setLoading(true);
 		setLocalError(null);
 
@@ -252,6 +284,12 @@ export default function InputSidebar({
 			setLoading(false);
 		}
 	};
+
+	// Function to handle sign in redirect
+	const handleSignIn = () => {
+		router.push("/login");
+	};
+
 	return (
 		<div className='flex-1 flex flex-col'>
 			<h2 className='text-lg font-semibold text-emerald-800 mb-4'>
@@ -263,6 +301,45 @@ export default function InputSidebar({
 				<div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2'>
 					<AlertCircle className='h-4 w-4 text-red-500 mt-0.5 flex-shrink-0' />
 					<p className='text-xs text-red-600'>{localError || error}</p>
+				</div>
+			)}
+
+			{/* Sign in prompt for non-authenticated users */}
+			{!user && (
+				<div className='mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex flex-col items-center text-center'>
+					<LogIn className='h-6 w-6 text-emerald-500 mb-2' />
+					<h3 className='text-sm font-medium text-emerald-800 mb-1'>
+						Sign in to upload content
+					</h3>
+					<p className='text-xs text-emerald-600 mb-3'>
+						Create an account or sign in to upload and process your own content
+					</p>
+					<Button
+						onClick={handleSignIn}
+						className='bg-emerald-600 hover:bg-emerald-700 text-white text-xs'
+					>
+						Sign In
+					</Button>
+				</div>
+			)}
+
+			{/* Test account notice */}
+			{isTestAccount && (
+				<div className='mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex flex-col items-center text-center'>
+					<AlertCircle className='h-6 w-6 text-amber-500 mb-2' />
+					<h3 className='text-sm font-medium text-amber-800 mb-1'>
+						Test Account Limitations
+					</h3>
+					<p className='text-xs text-amber-600 mb-3'>
+						You are using a test account. You can only access sample files. Sign
+						in with your email to upload your own content.
+					</p>
+					<Button
+						onClick={handleSignIn}
+						className='bg-amber-600 hover:bg-amber-700 text-white text-xs'
+					>
+						Sign In
+					</Button>
 				</div>
 			)}
 
@@ -309,8 +386,20 @@ export default function InputSidebar({
 								localError ? "border-red-300" : "border-emerald-200"
 							} 
 								rounded-lg p-3 md:p-4 text-center h-40 md:h-56 lg:h-64 flex flex-col items-center 
-								justify-center relative cursor-pointer hover:bg-emerald-50/50 transition-colors`}
-							onClick={() => document.getElementById("audio-upload").click()}
+								justify-center relative cursor-pointer hover:bg-emerald-50/50 transition-colors ${
+									!user || isTestAccount ? "opacity-50 cursor-not-allowed" : ""
+								}`}
+							onClick={() => {
+								if (!user) {
+									setLocalError("Please sign in to upload content");
+									return;
+								}
+								if (isTestAccount) {
+									setLocalError("Test accounts can only access sample files");
+									return;
+								}
+								document.getElementById("audio-upload").click();
+							}}
 						>
 							<Upload
 								className={`h-8 w-8 md:h-10 md:w-10 ${
@@ -322,14 +411,22 @@ export default function InputSidebar({
 									localError ? "text-red-800" : "text-emerald-800"
 								}`}
 							>
-								Upload Audio File
+								{!user
+									? "Sign in to upload"
+									: isTestAccount
+									? "Test accounts can only use samples"
+									: "Upload Audio File"}
 							</h3>
 							<p
 								className={`text-xs mt-1 ${
 									localError ? "text-red-600" : "text-emerald-600"
 								}`}
 							>
-								Click to upload (MP3, WAV, etc.)
+								{!user
+									? "Create an account to upload your own content"
+									: isTestAccount
+									? "Please sign in with your email"
+									: "Click to upload (MP3, WAV, etc.)"}
 							</p>
 							<input
 								id='audio-upload'
@@ -357,14 +454,40 @@ export default function InputSidebar({
 
 					<TabsContent value='pdf' className='h-full'>
 						<div
-							className='border-2 border-dashed border-emerald-200 rounded-lg p-3 md:p-4 text-center h-40 md:h-56 lg:h-64 flex flex-col items-center justify-center relative'
-							onClick={() => document.getElementById("pdf-upload").click()}
+							className={`border-2 border-dashed ${
+								localError ? "border-red-300" : "border-emerald-200"
+							} 
+								rounded-lg p-3 md:p-4 text-center h-40 md:h-56 lg:h-64 flex flex-col items-center 
+								justify-center relative cursor-pointer hover:bg-emerald-50/50 transition-colors ${
+									!user || isTestAccount ? "opacity-50 cursor-not-allowed" : ""
+								}`}
+							onClick={() => {
+								if (!user) {
+									setLocalError("Please sign in to upload content");
+									return;
+								}
+								if (isTestAccount) {
+									setLocalError("Test accounts can only access sample files");
+									return;
+								}
+								document.getElementById("pdf-upload").click();
+							}}
 						>
 							<FileText className='h-8 w-8 md:h-10 md:w-10 text-emerald-400' />
 							<h3 className='mt-2 text-emerald-800 font-medium text-sm'>
-								Upload PDF File
+								{!user
+									? "Sign in to upload"
+									: isTestAccount
+									? "Test accounts can only use samples"
+									: "Upload PDF File"}
 							</h3>
-							<p className='text-xs text-emerald-600 mt-1'>Click to upload</p>
+							<p className='text-xs text-emerald-600 mt-1'>
+								{!user
+									? "Create an account to upload your own content"
+									: isTestAccount
+									? "Please sign in with your email"
+									: "Click to upload"}
+							</p>
 							<input
 								id='pdf-upload'
 								type='file'
@@ -396,12 +519,29 @@ export default function InputSidebar({
 							<Input
 								type='url'
 								placeholder='https://www.youtube.com/watch?v=...'
-								className='w-full text-sm'
+								className={`w-full text-sm ${
+									!user || isTestAccount ? "opacity-50 cursor-not-allowed" : ""
+								}`}
 								value={youtubeUrl}
-								onChange={(e) => setYoutubeUrl(e.target.value)}
+								onChange={(e) => {
+									if (!user) {
+										setLocalError("Please sign in to enter a YouTube URL");
+										return;
+									}
+									if (isTestAccount) {
+										setLocalError("Test accounts can only access sample files");
+										return;
+									}
+									setYoutubeUrl(e.target.value);
+								}}
+								disabled={!user || isTestAccount}
 							/>
 							<p className='text-xs text-emerald-600'>
-								Enter the URL of a YouTube lecture or educational video
+								{!user
+									? "Sign in to enter a YouTube URL"
+									: isTestAccount
+									? "Test accounts can only use sample videos"
+									: "Enter the URL of a YouTube lecture or educational video"}
 							</p>
 						</div>
 
@@ -429,9 +569,19 @@ export default function InputSidebar({
 					onClick={handleSubmit}
 					disabled={
 						loading ||
-						(inputType === "audio" && !audioFile) ||
-						(inputType === "pdf" && !pdfFile) ||
-						(inputType === "youtube" && !youtubeUrl) ||
+						(!user &&
+							!selectedSampleId &&
+							!selectedPDFSampleId &&
+							!selectedYouTubeSampleId) ||
+						(isTestAccount &&
+							!selectedSampleId &&
+							!selectedPDFSampleId &&
+							!selectedYouTubeSampleId) ||
+						(inputType === "audio" && !audioFile && !selectedSampleId) ||
+						(inputType === "pdf" && !pdfFile && !selectedPDFSampleId) ||
+						(inputType === "youtube" &&
+							!youtubeUrl &&
+							!selectedYouTubeSampleId) ||
 						localError !== null
 					}
 					className='w-full bg-emerald-600 hover:bg-emerald-700'
@@ -441,6 +591,16 @@ export default function InputSidebar({
 							<Loader2 className='mr-2 h-4 w-4 animate-spin' />
 							Processing...
 						</>
+					) : !user &&
+					  !selectedSampleId &&
+					  !selectedPDFSampleId &&
+					  !selectedYouTubeSampleId ? (
+						"Sign in to process content"
+					) : isTestAccount &&
+					  !selectedSampleId &&
+					  !selectedPDFSampleId &&
+					  !selectedYouTubeSampleId ? (
+						"Test accounts can only use samples"
 					) : (
 						"Process Content"
 					)}

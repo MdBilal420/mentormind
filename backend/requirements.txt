@@ -14,3 +14,5 @@ deepgram-sdk
 supadata==1.1.0
 sentence_transformers
 PyPDF2
+supabase
+python-jose[cryptography]

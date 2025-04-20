@@ -1,5 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import Navigation from "../components/Navigation";
+import { AuthProvider } from "../contexts/AuthContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,7 +36,10 @@ export default function RootLayout({ children }) {
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				{children}
+				<AuthProvider>
+					<Navigation />
+					<main className='min-h-screen'>{children}</main>
+				</AuthProvider>
 			</body>
 		</html>
 	);

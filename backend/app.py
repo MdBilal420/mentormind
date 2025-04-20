@@ -23,6 +23,7 @@ from supadata import Supadata, SupadataError
 import PyPDF2
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from auth import router as auth_router
 
 app = FastAPI()
 
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the authentication router
+app.include_router(auth_router)
 
 load_dotenv()
 
