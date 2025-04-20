@@ -262,7 +262,7 @@ export default function TalkToTutorMode({ data, topic }) {
 							!topic ||
 							!data.transcription
 						}
-						className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-xl font-medium w-full sm:w-auto ${
+						className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-xl font-medium w-full  ${
 							conversation.status === "connected" ||
 							!topic ||
 							!data.transcription

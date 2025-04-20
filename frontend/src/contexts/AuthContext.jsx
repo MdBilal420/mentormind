@@ -15,6 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [isTestAccount, setIsTestAccount] = useState(false);
 
 	// Check for user session on initial load
 	useEffect(() => {
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }) => {
 
 				// Set the user if there's a session
 				setUser(session?.user || null);
+				setIsTestAccount(session?.user?.email === "test@mentormind.com");
 			} catch (error) {
 				console.error("Error checking user session:", error);
 			} finally {
@@ -41,6 +43,7 @@ export const AuthProvider = ({ children }) => {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event, session) => {
 			setUser(session?.user || null);
+			setIsTestAccount(session?.user?.email === "test@mentormind.com");
 			setLoading(false);
 		});
 
@@ -135,6 +138,7 @@ export const AuthProvider = ({ children }) => {
 	const value = {
 		user,
 		loading,
+		isTestAccount,
 		signUp,
 		signIn,
 		signOut,

@@ -101,9 +101,9 @@ export default function OutputSection({
 	return (
 		<div className='h-full flex flex-col'>
 			<div className='mb-2 md:mb-4'>
-				<h2 className='text-lg md:text-2xl font-semibold text-emerald-800 mb-2 md:mb-4'>
-					Learning Suite
-				</h2>
+				<h4 className='text-base md:text-xl font-semibold text-emerald-800 mb-3 md:mb-4'>
+					{topic.replace(/\.pdf|\.mp3$/, "") || "Learning Suite"}
+				</h4>
 
 				{/* Mobile Tab Selector */}
 				<div className='md:hidden mb-3'>
@@ -143,11 +143,7 @@ export default function OutputSection({
 				</div>
 			</div>
 
-			<div className='flex-1 bg-white/30 backdrop-blur-lg rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-3 md:p-6 border border-white/40 overflow-auto'>
-				<h4 className='text-base md:text-xl font-semibold text-emerald-800 mb-3 md:mb-4'>
-					{topic.replace(/\.pdf|\.mp3$/, "")}
-				</h4>
-
+			<div className='flex-1 bg-white/30 backdrop-blur-lg rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-3 md:p-6 border border-white/40'>
 				{/* Mobile Tab Indicator */}
 				<div className='md:hidden flex items-center mb-3 text-emerald-700'>
 					{getTabIcon(activeTab)}
@@ -175,7 +171,7 @@ export default function OutputSection({
 							</TabsList>
 						</div>
 
-						<div className='flex-1 overflow-auto'>
+						<div className='flex-1'>
 							{inputType !== "pdf" && (
 								<TabsContent value='transcription' className='h-full'>
 									<TranscriptionTab data={data} onRetry={onRetry} />

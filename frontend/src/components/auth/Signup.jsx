@@ -56,14 +56,34 @@ const Signup = () => {
 	};
 
 	return (
-		<div className='flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-emerald-50 to-white'>
-			<div className='w-full max-w-md space-y-8'>
+		<div className='flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-emerald-50 to-white relative overflow-hidden'>
+			{/* Background decorative elements */}
+			<div className='absolute inset-0 overflow-hidden pointer-events-none'>
+				<div className='absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 blur-3xl'></div>
+				<div className='absolute top-1/2 -left-20 w-60 h-60 bg-teal-200 rounded-full opacity-20 blur-3xl'></div>
+				<div className='absolute bottom-0 right-1/4 w-40 h-40 bg-cyan-200 rounded-full opacity-20 blur-3xl'></div>
+				<div className='absolute top-1/3 left-1/4 w-20 h-20 bg-emerald-300 rounded-full opacity-10 blur-2xl'></div>
+			</div>
+
+			<div className='w-full max-w-md space-y-8 relative z-10'>
 				<div>
 					<h2 className='mt-6 text-center text-3xl font-bold tracking-tight text-emerald-800'>
-						Join EduBot
+						Join MentorMind
 					</h2>
 					<p className='mt-2 text-center text-sm text-emerald-600'>
 						Create your account to start learning
+					</p>
+				</div>
+
+				{/* Product Overview */}
+				<div className='bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-100 shadow-sm'>
+					<h3 className='text-sm font-medium text-emerald-700 mb-2'>
+						About MentorMind
+					</h3>
+					<p className='text-xs text-emerald-600'>
+						MentorMind is your personal AI learning companion that adapts to
+						your learning style. Upload your study materials, ask questions, and
+						get personalized explanations to master any subject.
 					</p>
 				</div>
 
