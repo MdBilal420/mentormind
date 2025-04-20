@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import LoadingSteps from "./LoadingSteps";
-import { toast } from "./ui/toast";
+import { toast } from "./ui/toast.jsx";
 
 export default function SummaryTab({ data }) {
 	const [copied, setCopied] = useState(false);
