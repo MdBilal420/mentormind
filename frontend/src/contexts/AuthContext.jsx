@@ -21,6 +21,12 @@ export const AuthProvider = ({ children }) => {
 	useEffect(() => {
 		const checkUser = async () => {
 			try {
+				// Skip authentication check if Supabase is not available (during static builds)
+				if (!supabase) {
+					setLoading(false);
+					return;
+				}
+
 				// Get the current session
 				const {
 					data: { session },
@@ -39,23 +45,33 @@ export const AuthProvider = ({ children }) => {
 		checkUser();
 
 		// Listen for authentication state changes
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((event, session) => {
-			setUser(session?.user || null);
-			setIsTestAccount(session?.user?.email === "test@mentormind.com");
-			setLoading(false);
-		});
+		if (supabase) {
+			const {
+				data: { subscription },
+			} = supabase.auth.onAuthStateChange((event, session) => {
+				setUser(session?.user || null);
+				setIsTestAccount(session?.user?.email === "test@mentormind.com");
+				setLoading(false);
+			});
 
-		// Clean up the subscription when the component unmounts
-		return () => {
-			subscription.unsubscribe();
-		};
+			// Clean up the subscription when the component unmounts
+			return () => {
+				subscription.unsubscribe();
+			};
+		}
 	}, []);
 
 	// Sign up function
 	const signUp = async (email, password) => {
 		try {
+			// Skip if Supabase is not available
+			if (!supabase) {
+				return {
+					data: null,
+					error: new Error("Authentication service not available"),
+				};
+			}
+
 			// Use signUpWithPassword instead of signUp to ensure proper user creation
 			const { data, error } = await supabase.auth.signUp({
 				email,
@@ -81,6 +97,14 @@ export const AuthProvider = ({ children }) => {
 	// Sign in function
 	const signIn = async (email, password) => {
 		try {
+			// Skip if Supabase is not available
+			if (!supabase) {
+				return {
+					data: null,
+					error: new Error("Authentication service not available"),
+				};
+			}
+
 			const { data, error } = await supabase.auth.signInWithPassword({
 				email,
 				password,
@@ -97,6 +121,11 @@ export const AuthProvider = ({ children }) => {
 	// Sign out function
 	const signOut = async () => {
 		try {
+			// Skip if Supabase is not available
+			if (!supabase) {
+				return { error: new Error("Authentication service not available") };
+			}
+
 			const { error } = await supabase.auth.signOut();
 			if (error) throw error;
 			return { error: null };
@@ -109,6 +138,14 @@ export const AuthProvider = ({ children }) => {
 	// Reset password function
 	const resetPassword = async (email) => {
 		try {
+			// Skip if Supabase is not available
+			if (!supabase) {
+				return {
+					data: null,
+					error: new Error("Authentication service not available"),
+				};
+			}
+
 			const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
 				redirectTo: `${window.location.origin}/login`,
 			});
@@ -123,6 +160,14 @@ export const AuthProvider = ({ children }) => {
 	// Update password function
 	const updatePassword = async (newPassword) => {
 		try {
+			// Skip if Supabase is not available
+			if (!supabase) {
+				return {
+					data: null,
+					error: new Error("Authentication service not available"),
+				};
+			}
+
 			const { data, error } = await supabase.auth.updateUser({
 				password: newPassword,
 			});
