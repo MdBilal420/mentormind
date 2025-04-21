@@ -157,7 +157,7 @@ export default function PracticeZoneTab({ data }) {
 						<ArrowLeft className='h-4 w-4' />
 						<span>Back to Practice Zone</span>
 					</button>
-					<ConceptDetective />
+					<ConceptDetective data={data} />
 				</div>
 			)}
 		</div>
