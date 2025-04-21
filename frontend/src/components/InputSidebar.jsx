@@ -392,7 +392,7 @@ export default function InputSidebar({
 								className={`border-2 border-dashed ${
 									localError ? "border-red-300" : "border-emerald-200"
 								} 
-									rounded-lg p-3 md:p-4 text-center h-40 md:h-56 lg:h-64 flex flex-col items-center 
+									rounded-lg p-3 md:p-4 text-center h-25 md:h-25 lg:h-25 flex flex-col items-center 
 									justify-center relative cursor-pointer hover:bg-emerald-50/50 transition-colors ${
 										!user || isTestAccount
 											? "opacity-50 cursor-not-allowed"
@@ -466,7 +466,7 @@ export default function InputSidebar({
 								className={`border-2 border-dashed ${
 									localError ? "border-red-300" : "border-emerald-200"
 								} 
-									rounded-lg p-3 md:p-4 text-center h-40 md:h-56 lg:h-64 flex flex-col items-center 
+									rounded-lg p-3 md:p-4 text-center h-25 md:h-25 lg:h-25 flex flex-col items-center 
 									justify-center relative cursor-pointer hover:bg-emerald-50/50 transition-colors ${
 										!user || isTestAccount
 											? "opacity-50 cursor-not-allowed"
