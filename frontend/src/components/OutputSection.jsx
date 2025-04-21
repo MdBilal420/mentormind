@@ -1,13 +1,7 @@
-import {
-	BookOpen,
-	Brain,
-	FileText,
-	Loader2,
-	MessageCircle,
-	Mic,
-} from "lucide-react";
+import { BookOpen, Brain, FileText, MessageCircle, Mic } from "lucide-react";
 import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
+import LoadingState from "./LoadingState";
 import QuizTab from "./QuizTab";
 import SummaryTab from "./SummaryTab";
 import TalkToTutorMode from "./TalkToTutorMode";
@@ -81,22 +75,6 @@ export default function OutputSection({
 		inputType === "pdf"
 			? ["summary", "quiz", "ask", "talk"]
 			: ["transcription", "summary", "quiz", "ask", "talk"];
-
-	// Loading state component
-	const LoadingState = () => (
-		<div className='flex flex-col items-center justify-center h-full py-12'>
-			<div className='relative'>
-				<Loader2 className='w-12 h-12 text-emerald-500 animate-spin' />
-				<div className='absolute inset-0 flex items-center justify-center'>
-					<div className='w-6 h-6 rounded-full bg-white'></div>
-				</div>
-			</div>
-			<p className='mt-4 text-emerald-700 font-medium'>
-				Processing your content...
-			</p>
-			<p className='text-sm text-emerald-600 mt-1'>This may take a moment</p>
-		</div>
-	);
 
 	return (
 		<div className='h-full flex flex-col'>
