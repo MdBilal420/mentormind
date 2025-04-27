@@ -444,7 +444,7 @@ export default function ConceptDetective({ data }) {
 				<LoadingSteps currentStep={loadingStep} />
 				<p className='text-center text-muted-foreground'>
 					{loadingStep === 0
-						? "Analyzing your content..."
+						? "Preparing your detective mission..."
 						: loadingStep === 1
 						? "Creating an engaging analogy..."
 						: "Preparing your detective mission..."}
