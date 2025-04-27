@@ -2,7 +2,7 @@ import { BookOpen, Brain, FileText, MessageCircle, Mic } from "lucide-react";
 import { useEffect } from "react";
 import AskTutorTab from "./AskTutorTab";
 import LoadingState from "./LoadingState";
-import QuizTab from "./QuizTab";
+import PracticeZoneTab from "./PracticeZoneTab";
 import SummaryTab from "./SummaryTab";
 import TalkToTutorMode from "./TalkToTutorMode";
 import TranscriptionTab from "./TranscriptionTab";
@@ -161,7 +161,7 @@ export default function OutputSection({
 							</TabsContent>
 
 							<TabsContent value='quiz' className='h-full'>
-								<QuizTab data={data} />
+								<PracticeZoneTab data={data} />
 							</TabsContent>
 
 							<TabsContent value='ask' className='h-full'>
