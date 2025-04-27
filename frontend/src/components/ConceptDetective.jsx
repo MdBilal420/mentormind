@@ -592,13 +592,14 @@ export default function ConceptDetective({ data }) {
 													className='flex items-center justify-between cursor-pointer'
 													onClick={() => toggleExpandQuestion(questionIndex)}
 												>
-													<span className='text-sm font-medium'>
+													<span className='text-sm font-semibold text-primary/90 flex items-center gap-2'>
+														<CheckCircle2 className='h-4 w-4' />
 														Your Answer
 													</span>
 													{expandedQuestions[questionIndex] ? (
-														<ChevronUp className='h-4 w-4' />
+														<ChevronUp className='h-4 w-4 text-primary/70' />
 													) : (
-														<ChevronDown className='h-4 w-4' />
+														<ChevronDown className='h-4 w-4 text-primary/70' />
 													)}
 												</div>
 												<AnimatePresence>
@@ -610,7 +611,7 @@ export default function ConceptDetective({ data }) {
 															transition={{ duration: 0.2 }}
 															className='overflow-hidden'
 														>
-															<div className='p-3 bg-muted rounded-md mt-2 text-sm'>
+															<div className='p-3 bg-muted/50 backdrop-blur-sm rounded-md mt-2 text-sm border border-primary/10'>
 																{userAnswers[
 																	`${currentLevel}-${questionIndex}`
 																] || "No answer provided."}
@@ -627,13 +628,14 @@ export default function ConceptDetective({ data }) {
 															toggleExpandQuestion(`feedback-${questionIndex}`)
 														}
 													>
-														<span className='text-sm font-medium'>
+														<span className='text-sm font-semibold text-primary/90 flex items-center gap-2'>
+															<Lightbulb className='h-4 w-4' />
 															Feedback
 														</span>
 														{expandedQuestions[`feedback-${questionIndex}`] ? (
-															<ChevronUp className='h-4 w-4' />
+															<ChevronUp className='h-4 w-4 text-primary/70' />
 														) : (
-															<ChevronDown className='h-4 w-4' />
+															<ChevronDown className='h-4 w-4 text-primary/70' />
 														)}
 													</div>
 													<AnimatePresence>
@@ -645,7 +647,7 @@ export default function ConceptDetective({ data }) {
 																transition={{ duration: 0.2 }}
 																className='overflow-hidden'
 															>
-																<div className='p-3 bg-muted rounded-md mt-2 text-sm'>
+																<div className='p-3 bg-muted/50 backdrop-blur-sm rounded-md mt-2 text-sm border border-primary/10'>
 																	{feedback[
 																		`${currentLevel}-${questionIndex}`
 																	] || "No feedback available."}
