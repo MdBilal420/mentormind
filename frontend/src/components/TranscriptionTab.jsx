@@ -114,10 +114,24 @@ export default function TranscriptionTab({ data, onRetry }) {
 						onTimestampClick={handleTimestampClick}
 					/>
 				) : (
-					<div className='p-4'>
-						<p className='text-sm md:text-base text-emerald-900 whitespace-pre-line'>
-							{data.transcription}
-						</p>
+					<div className='p-4 bg-white/70 rounded-lg shadow-sm'>
+						{data.videoTitle && (
+							<h3 className='text-lg font-medium text-emerald-800 mb-3 border-b border-emerald-100 pb-2'>
+								{data.videoTitle}
+							</h3>
+						)}
+						<div className='space-y-4'>
+							{data.transcription
+								.split(/(?<=\.|\?|\!) (?=[A-Z])/)
+								.map((paragraph, index) => (
+									<p
+										key={index}
+										className='text-sm md:text-base text-emerald-900 leading-relaxed'
+									>
+										{paragraph.trim()}
+									</p>
+								))}
+						</div>
 					</div>
 				)}
 			</div>

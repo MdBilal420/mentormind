@@ -12,7 +12,9 @@ export default function InputSidebar({
 }) {
 	const [audioFile, setAudioFile] = useState(null);
 	const [pdfFile, setPdfFile] = useState(null);
-	const [youtubeUrl, setYoutubeUrl] = useState("");
+	const [youtubeUrl, setYoutubeUrl] = useState(
+		"https://www.youtube.com/watch?v=lt4OsgmUTGI"
+	);
 	const [loading, setLoading] = useState(false);
 	const [localError, setLocalError] = useState(null);
 
@@ -108,7 +110,7 @@ export default function InputSidebar({
 				}}
 				className='flex-1 flex flex-col'
 			>
-				<TabsList className='grid grid-cols-3 mb-4'>
+				<TabsList className='grid grid-cols-2 mb-4'>
 					<TabsTrigger
 						value='audio'
 						className='flex items-center gap-1 text-xs'
@@ -116,10 +118,10 @@ export default function InputSidebar({
 						<Upload className='h-3.5 w-3.5 md:h-4 md:w-4' />
 						<span>Audio</span>
 					</TabsTrigger>
-					<TabsTrigger value='pdf' className='flex items-center gap-1 text-xs'>
+					{/* <TabsTrigger value='pdf' className='flex items-center gap-1 text-xs'>
 						<FileText className='h-3.5 w-3.5 md:h-4 md:w-4' />
 						<span>PDF</span>
-					</TabsTrigger>
+					</TabsTrigger> */}
 					<TabsTrigger
 						value='youtube'
 						className='flex items-center gap-1 text-xs'
