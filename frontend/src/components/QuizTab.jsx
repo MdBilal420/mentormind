@@ -420,7 +420,7 @@ export default function QuizTab({ data }) {
 	const totalQuestions = data.questions.length;
 
 	return (
-		<div className='bg-white/50 rounded-lg p-4 md:p-5 h-full flex flex-col'>
+		<div className='bg-white/50 rounded-lg p-4 md:p-5  flex flex-col'>
 			{/* Progress bar and navigation */}
 			<div className='mb-6'>
 				<div className='flex justify-between items-center mb-2'>
@@ -453,7 +453,7 @@ export default function QuizTab({ data }) {
 					transition={{ duration: 0.3 }}
 					className='flex-1 flex flex-col'
 				>
-					<div className='bg-white/70 rounded-lg p-4 shadow-sm mb-6'>
+					<div className='bg-white/70 rounded-lg p-4 shadow-md '>
 						<div className='flex items-start gap-3 mb-4'>
 							<div className='w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-medium text-sm flex-shrink-0'>
 								{currentQuestionIndex + 1}
@@ -505,7 +505,7 @@ export default function QuizTab({ data }) {
 			</AnimatePresence>
 
 			{/* Navigation buttons */}
-			<div className='flex justify-between mt-auto pt-4'>
+			<div className='flex justify-between mt-2 pt-2'>
 				<button
 					onClick={handlePrevQuestion}
 					disabled={currentQuestionIndex === 0}

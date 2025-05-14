@@ -1,6 +1,7 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+//import { ElevenLabsClient } from "elevenlabs";
+import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { useTranscription } from "../hooks/useTranscription";
@@ -8,6 +9,10 @@ import InputSidebar from "./InputSidebar";
 import OutputSection from "./OutputSection";
 
 export default function Dashboard() {
+	// const client = new ElevenLabsClient({
+	// 	apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY,
+	// });
+
 	const [activeTab, setActiveTab] = useState("transcription");
 	const [outputData, setOutputData] = useState({
 		transcription: "",
@@ -20,6 +25,7 @@ export default function Dashboard() {
 	});
 	const [inputType, setInputType] = useState("audio");
 	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [knowledgeBase, setKnowledgeBase] = useState([]);
 	const {
 		transcriptionData,
 		processAudioFile,
@@ -28,14 +34,20 @@ export default function Dashboard() {
 		retryTranscription,
 	} = useTranscription();
 	const [chatMessages, setChatMessages] = useState([]);
+	const [showUploadIndicator, setShowUploadIndicator] = useState(false);
+
+	const [topic, setTopic] = useState("");
 
 	// Close sidebar by default on mobile
 	useEffect(() => {
 		const handleResize = () => {
 			if (window.innerWidth < 768) {
 				setSidebarOpen(false);
+				// Show upload indicator after a short delay on mobile
+				setTimeout(() => setShowUploadIndicator(true), 1000);
 			} else {
 				setSidebarOpen(true);
+				setShowUploadIndicator(false);
 			}
 		};
 
@@ -46,6 +58,17 @@ export default function Dashboard() {
 		window.addEventListener("resize", handleResize);
 		return () => window.removeEventListener("resize", handleResize);
 	}, []);
+
+	// Show upload indicator when sidebar is closed on mobile
+	useEffect(() => {
+		if (!sidebarOpen && window.innerWidth < 768) {
+			// Show indicator after a short delay when sidebar is closed
+			const timer = setTimeout(() => setShowUploadIndicator(true), 500);
+			return () => clearTimeout(timer);
+		} else {
+			setShowUploadIndicator(false);
+		}
+	}, [sidebarOpen]);
 
 	// When transcription data changes, update output data
 	useEffect(() => {
@@ -268,45 +291,22 @@ export default function Dashboard() {
 		}
 	};
 
-	// Helper function to convert timestamp format (HH:MM:SS) to seconds
-	const parseTimeToSeconds = (timestamp) => {
-		if (!timestamp) return 0;
+	// useEffect(() => {
+	// 	const a = async () => {
+	// 		const response = await client.conversationalAi.getKnowledgeBaseList();
+	// 		const documents = response.documents.map((document) => ({
+	// 			id: document.id,
+	// 			name: document.name.replace(".pdf", "").replace(".mp3", ""),
+	// 		}));
+	// 		setKnowledgeBase(documents);
+	// 	};
+	// 	a();
+	// }, []);
 
-		const parts = timestamp.split(":");
-		let seconds = 0;
-
-		// Handle hours, minutes, seconds
-		if (parts.length === 3) {
-			seconds =
-				parseInt(parts[0]) * 3600 +
-				parseInt(parts[1]) * 60 +
-				parseInt(parts[2]);
-		}
-		// Handle minutes, seconds
-		else if (parts.length === 2) {
-			seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-		}
-		// Handle just seconds
-		else if (parts.length === 1) {
-			seconds = parseInt(parts[0]);
-		}
-
-		return seconds;
-	};
+	// console.log(knowledgeBase);
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col md:flex-row'>
-			{/* Mobile Header with Menu */}
-			<div className='md:hidden flex items-center justify-between p-4 border-b border-emerald-200 bg-white/30 backdrop-blur-sm'>
-				<h1 className='text-xl font-bold text-emerald-800'>MentorMind</h1>
-				<button
-					onClick={() => setSidebarOpen(!sidebarOpen)}
-					className='p-2 rounded-lg bg-emerald-100 text-emerald-700'
-				>
-					{sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-				</button>
-			</div>
-
 			{/* Sidebar for Inputs */}
 			<div
 				className={`
@@ -318,18 +318,13 @@ export default function Dashboard() {
 				w-3/4 sm:w-64
 			`}
 			>
-				<div className='hidden md:block mb-6'>
-					<h1 className='text-2xl font-bold text-emerald-800'>MentorMind</h1>
-					<p className='text-emerald-600 text-sm mt-1'>
-						Smart Learning, Simplified
-					</p>
-				</div>
-
 				<InputSidebar
 					onProcessContent={handleProcessContent}
 					inputType={inputType}
 					setInputType={setInputType}
 					error={outputData.error}
+					setTopic={setTopic}
+					setOutputData={setOutputData}
 				/>
 			</div>
 
@@ -339,6 +334,18 @@ export default function Dashboard() {
 					className='md:hidden fixed inset-0 bg-black bg-opacity-50 z-10'
 					onClick={() => setSidebarOpen(false)}
 				></div>
+			)}
+
+			{/* Upload Indicator for Mobile */}
+			{!sidebarOpen && showUploadIndicator && (
+				<div className='md:hidden fixed bottom-6 right-3 z-30 animate-bounce'>
+					<button
+						onClick={() => setSidebarOpen(true)}
+						className='bg-emerald-600 text-white p-3 rounded-full shadow-lg'
+					>
+						<Upload size={20} />
+					</button>
+				</div>
 			)}
 
 			{/* Main Content for Output */}
@@ -351,6 +358,7 @@ export default function Dashboard() {
 					chatMessages={chatMessages}
 					setChatMessages={setChatMessages}
 					inputType={inputType}
+					topic={topic}
 				/>
 			</div>
 

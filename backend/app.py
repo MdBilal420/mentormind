@@ -23,6 +23,7 @@ from supadata import Supadata, SupadataError
 import PyPDF2
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from auth import router as auth_router
 
 app = FastAPI()
 
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the authentication router
+app.include_router(auth_router)
 
 load_dotenv()
 
@@ -1052,6 +1056,8 @@ async def process_pdf_endpoint(file: UploadFile = File(...)):
         return {
             "success": False,
             "summary": "",
+            "transcript": "",  # Add empty transcript
+            "questions": [],   # Add empty questions list
             "error": str(e)
         }
 
@@ -1134,6 +1140,272 @@ def search_relevant_chunks(query_embedding: List[float],
     
     top_indices = np.argsort(similarities)[-top_k:][::-1]
     return [chunks[i] for i in top_indices]
+
+# Add environment variable check
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+if not ELEVENLABS_API_KEY:
+    print("Warning: ELEVENLABS_API_KEY environment variable not set")
+
+class SignedUrlResponse(BaseModel):
+    signedUrl: str
+
+@app.get("/api/get-signed-url", response_model=SignedUrlResponse)
+async def get_signed_url():
+    """Get a signed URL for ElevenLabs voice agent conversation"""
+    try:
+        if not ELEVENLABS_API_KEY:
+            raise HTTPException(
+                status_code=500, 
+                detail="ELEVENLABS_API_KEY not configured"
+            )
+
+        # Get the agent ID from environment variable
+        agent_id = os.getenv("ELEVENLABS_AGENT_ID")
+        if not agent_id:
+            raise HTTPException(
+                status_code=500,
+                detail="ELEVENLABS_AGENT_ID not configured"
+            )
+
+        # Make request to ElevenLabs API
+        response = await requests.get(
+            f"https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id={agent_id}",
+            headers={
+                "xi-api-key": ELEVENLABS_API_KEY
+            }
+        )
+
+        if not response.ok:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Failed to get signed URL: {response.text}"
+            )
+
+        data = response.json()
+        return {"signedUrl": data["signed_url"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting signed URL: {str(e)}"
+        )
+
+class ConceptDetectiveRequest(BaseModel):
+    transcript: str
+
+class ConceptDetectiveQuestion(BaseModel):
+    text: str
+    type: str
+
+class ConceptDetectiveLevel(BaseModel):
+    title: str
+    story: str
+    questions: List[ConceptDetectiveQuestion]
+
+class ConceptDetectiveResponse(BaseModel):
+    success: bool
+    analogy: str
+    description: str
+    levels: List[ConceptDetectiveLevel]
+    error: Optional[str] = None
+
+@app.post("/api/generate-concept-detective", response_model=ConceptDetectiveResponse)
+async def generate_concept_detective(request: ConceptDetectiveRequest):
+    """
+    Generate a Concept Detective game based on the transcript content
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+            
+        # Truncate very long transcripts to prevent API limits
+        max_length = 16000  # Adjust based on the model's context window
+        truncated_transcript = request.transcript[:max_length]
+        if len(request.transcript) > max_length:
+            truncated_transcript += "\n[Transcript truncated due to length...]"
+            
+        # Use Groq to generate the game data
+        if not GROQ_API_KEY or not groq_client:
+            raise HTTPException(
+                status_code=500, 
+                detail="GROQ_API_KEY not configured"
+            )
+            
+        prompt = f"""
+        Create a Concept Detective game based on the following transcript.
+        
+        The game should:
+        1. Use a creative analogy (like cookies, islands, pets, game consoles, etc.) that reflects the core idea of the transcript
+        2. Have multiple levels that reflect different layers or subtopics from the material
+        3. Each level should have a brief story using the analogy and 3-5 open-ended questions
+        
+        Format your response as a JSON object with the following structure:
+        {{
+          "analogy": "The creative analogy you've chosen",
+          "description": "A brief description of how the analogy relates to the transcript content",
+          "levels": [
+            {{
+              "title": "Level 1: [Level Title]",
+              "story": "A brief story using the analogy that introduces the level",
+              "questions": [
+                {{
+                  "text": "Question 1",
+                  "type": "open-ended"
+                }},
+                // More questions...
+              ]
+            }},
+            // More levels...
+          ]
+        }}
+        
+        Make sure the questions are thought-provoking and require the user to apply or explain key ideas from the transcript.
+        
+        Transcript:
+        {truncated_transcript}
+        """
+        
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using Llama 3.3 70B model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that creates educational games. You always respond with valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,  # Higher temperature for more creative analogies
+            max_tokens=2048,
+            response_format={"type": "json_object"}  # Ensure JSON response
+        )
+        
+        # Extract the game data from the response
+        game_data = json.loads(response.choices[0].message.content)
+        
+        return {
+            "success": True,
+            "analogy": game_data.get("analogy", ""),
+            "description": game_data.get("description", ""),
+            "levels": game_data.get("levels", []),
+            "error": None
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "analogy": "",
+            "description": "",
+            "levels": [],
+            "error": str(e)
+        }
+
+class ConceptDetectiveAnswer(BaseModel):
+    levelIndex: int
+    questionIndex: int
+    answer: str
+
+class ConceptDetectiveEvaluationRequest(BaseModel):
+    transcript: str
+    answers: List[ConceptDetectiveAnswer]
+
+class ConceptDetectiveEvaluationResponse(BaseModel):
+    success: bool
+    scores: Dict[str, int]  # Format: "levelIndex-questionIndex": score
+    feedback: Dict[str, str]  # Format: "levelIndex-questionIndex": feedback
+    error: Optional[str] = None
+
+@app.post("/api/evaluate-concept-detective", response_model=ConceptDetectiveEvaluationResponse)
+async def evaluate_concept_detective(request: ConceptDetectiveEvaluationRequest):
+    """
+    Evaluate the user's answers for the Concept Detective game
+    """
+    try:
+        if not request.transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+            
+        if not request.answers:
+            raise HTTPException(status_code=400, detail="Answers are required")
+            
+        # Truncate very long transcripts to prevent API limits
+        max_length = 16000  # Adjust based on the model's context window
+        truncated_transcript = request.transcript[:max_length]
+        if len(request.transcript) > max_length:
+            truncated_transcript += "\n[Transcript truncated due to length...]"
+            
+        # Use Groq to evaluate the answers
+        if not GROQ_API_KEY or not groq_client:
+            raise HTTPException(
+                status_code=500, 
+                detail="GROQ_API_KEY not configured"
+            )
+            
+        # Format answers for the prompt
+        formatted_answers = []
+        for answer in request.answers:
+            formatted_answers.append({
+                "levelIndex": answer.levelIndex,
+                "questionIndex": answer.questionIndex,
+                "answer": answer.answer
+            })
+            
+        prompt = f"""
+        Evaluate the following answers for a Concept Detective game based on the transcript.
+        
+        For each answer, provide:
+        1. A score from 0-4:
+           - 0: Completely incorrect or misunderstanding
+           - 1: Somewhat related but mostly off
+           - 2: Partial understanding with missing or confused parts
+           - 3: Mostly correct with minor flaws
+           - 4: Fully correct, showing clear understanding
+        2. Brief feedback explaining the score and what could be improved
+        
+        Format your response as a JSON object with the following structure:
+        {{
+          "scores": {{
+            "levelIndex-questionIndex": score,
+            // More scores...
+          }},
+          "feedback": {{
+            "levelIndex-questionIndex": "Feedback text",
+            // More feedback...
+          }}
+        }}
+        
+        Transcript:
+        {truncated_transcript}
+        
+        Answers to evaluate:
+        {json.dumps(formatted_answers, indent=2)}
+        """
+        
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using Llama 3.3 70B model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that evaluates educational answers. You always respond with valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,  # Lower temperature for more consistent evaluation
+            max_tokens=2048,
+            response_format={"type": "json_object"}  # Ensure JSON response
+        )
+        
+        # Extract the evaluation data from the response
+        evaluation_data = json.loads(response.choices[0].message.content)
+        
+        return {
+            "success": True,
+            "scores": evaluation_data.get("scores", {}),
+            "feedback": evaluation_data.get("feedback", {}),
+            "error": None
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "scores": {},
+            "feedback": {},
+            "error": str(e)
+        }
 
 
 
