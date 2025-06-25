@@ -108,6 +108,7 @@ export default function TranscriptionTab({ data, onRetry }) {
 						sentences={data.sentences}
 						currentTime={currentTime}
 						onTimestampClick={handleTimestampClick}
+						transcript={data.transcription}
 					/>
 				) : (
 					<div className='p-4 bg-white/70 rounded-lg shadow-sm'>
