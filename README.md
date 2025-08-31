@@ -1,5 +1,6 @@
-MentorMind is an AI-powered assistant that transcribes lectures, generates structured notes, and creates quizzes to improve the online learning experience. 
-It efficiently converts audio recordings and YouTube videos into comprehensive lecture notes and formulates quizzes to assess students' understanding.
+MentorMind is an AI-powered research and note-taking platform that transforms diverse content sources into structured knowledge through intelligent transcription and analysis.
+Multi-format content processing with real-time transcription, AI summaries, interactive assessments, and conversational AI assistant, currently used by 15+ researchers across different parts of the country.
+
 
 ## 🌟 Features
 
